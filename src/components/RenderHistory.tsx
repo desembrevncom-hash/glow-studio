@@ -9,6 +9,8 @@ interface RenderHistoryProps {
   onVariation: (job: PhotoshootJob) => void;
   onDelete: (jobId: string) => void;
   onSelectResult: (job: PhotoshootJob) => void;
+  onReuseJobProduct: (job: PhotoshootJob) => void;
+  onClearHistory: () => void;
   actionInProgressId: string | null;
 }
 
@@ -19,6 +21,8 @@ export const RenderHistory: React.FC<RenderHistoryProps> = ({
   onVariation,
   onDelete,
   onSelectResult,
+  onReuseJobProduct,
+  onClearHistory,
   actionInProgressId
 }) => {
   const getPresetName = (presetId: string) => {
@@ -28,9 +32,19 @@ export const RenderHistory: React.FC<RenderHistoryProps> = ({
   const formatDate = (isoString: string) => {
     try {
       const d = new Date(isoString);
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + d.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
+      return (
+        d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) +
+        ' ' +
+        d.toLocaleDateString([], { day: '2-digit', month: '2-digit' })
+      );
     } catch {
       return '';
+    }
+  };
+
+  const handleClearAll = () => {
+    if (window.confirm('Bạn có chắc chắn muốn xoá toàn bộ lịch sử render của phiên làm việc này?')) {
+      onClearHistory();
     }
   };
 
@@ -46,6 +60,15 @@ export const RenderHistory: React.FC<RenderHistoryProps> = ({
           </h2>
           <p className="text-zinc-500 text-xs mt-1">Các ảnh render trong phiên làm việc hiện tại</p>
         </div>
+
+        {history.length > 0 && (
+          <button
+            onClick={handleClearAll}
+            className="text-xs font-semibold text-zinc-500 hover:text-red-400 py-1.5 px-3 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-red-900/50 transition-colors"
+          >
+            Xoá lịch sử phiên này
+          </button>
+        )}
       </div>
 
       {isLoading && history.length === 0 ? (
@@ -63,6 +86,7 @@ export const RenderHistory: React.FC<RenderHistoryProps> = ({
           {history.map((job) => {
             const isProcessing = actionInProgressId === job.id;
             const hasImage = Boolean(job.resultImageUrl);
+            const hasSourceImage = Boolean(job.mainImageUrl);
 
             return (
               <div
@@ -124,48 +148,59 @@ export const RenderHistory: React.FC<RenderHistoryProps> = ({
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-zinc-800/60">
-                    {hasImage ? (
-                      <a
-                        href={job.resultImageUrl}
-                        download={`studio-glow-${job.id}.png`}
-                        title="Tải ảnh về"
-                        className="p-2 rounded-xl bg-zinc-800/70 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold flex items-center justify-center transition-colors text-center"
+                  <div className="flex flex-col gap-2 pt-2 border-t border-zinc-800/60">
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {hasImage ? (
+                        <a
+                          href={job.resultImageUrl}
+                          download={`studio-glow-${job.id}.png`}
+                          title="Tải ảnh về"
+                          className="p-2 rounded-xl bg-zinc-800/70 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold flex items-center justify-center transition-colors text-center"
+                        >
+                          Tải
+                        </a>
+                      ) : (
+                        <div className="p-2 rounded-xl bg-zinc-800/30 text-zinc-600 text-xs flex items-center justify-center cursor-not-allowed">
+                          Tải
+                        </div>
+                      )}
+
+                      <button
+                        onClick={() => onRerender(job)}
+                        disabled={isProcessing}
+                        title="Render lại với thông số gốc"
+                        className="p-2 rounded-xl bg-zinc-800/70 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold flex items-center justify-center transition-colors disabled:opacity-50"
                       >
-                        Tải
-                      </a>
-                    ) : (
-                      <div className="p-2 rounded-xl bg-zinc-800/30 text-zinc-600 text-xs flex items-center justify-center cursor-not-allowed">
-                        Tải
-                      </div>
+                        {isProcessing ? '...' : 'Re-render'}
+                      </button>
+
+                      <button
+                        onClick={() => onVariation(job)}
+                        disabled={isProcessing}
+                        title="Tạo biến thể góc/bố cục mới"
+                        className="p-2 rounded-xl bg-zinc-800/70 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold flex items-center justify-center transition-colors disabled:opacity-50"
+                      >
+                        {isProcessing ? '...' : 'Biến thể'}
+                      </button>
+
+                      <button
+                        onClick={() => onDelete(job.id)}
+                        disabled={isProcessing}
+                        title="Xoá ảnh này"
+                        className="p-2 rounded-xl bg-red-950/40 hover:bg-red-900/60 text-red-300 text-xs font-semibold flex items-center justify-center transition-colors disabled:opacity-50"
+                      >
+                        Xoá
+                      </button>
+                    </div>
+
+                    {hasSourceImage && (
+                      <button
+                        onClick={() => onReuseJobProduct(job)}
+                        className="w-full py-1.5 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-200 text-[11px] font-medium transition-colors text-center"
+                      >
+                        ↩ Dùng lại sản phẩm này cho workspace
+                      </button>
                     )}
-
-                    <button
-                      onClick={() => onRerender(job)}
-                      disabled={isProcessing}
-                      title="Render lại với thông số gốc"
-                      className="p-2 rounded-xl bg-zinc-800/70 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold flex items-center justify-center transition-colors disabled:opacity-50"
-                    >
-                      {isProcessing ? '...' : 'Re-render'}
-                    </button>
-
-                    <button
-                      onClick={() => onVariation(job)}
-                      disabled={isProcessing}
-                      title="Tạo biến thể góc/bố cục mới"
-                      className="p-2 rounded-xl bg-zinc-800/70 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold flex items-center justify-center transition-colors disabled:opacity-50"
-                    >
-                      {isProcessing ? '...' : 'Biến thể'}
-                    </button>
-
-                    <button
-                      onClick={() => onDelete(job.id)}
-                      disabled={isProcessing}
-                      title="Xoá ảnh này"
-                      className="p-2 rounded-xl bg-red-950/40 hover:bg-red-900/60 text-red-300 text-xs font-semibold flex items-center justify-center transition-colors disabled:opacity-50"
-                    >
-                      Xoá
-                    </button>
                   </div>
                 </div>
               </div>

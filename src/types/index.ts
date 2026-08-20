@@ -69,4 +69,17 @@ export interface PhotoshootJob {
   updatedAt: string;
 }
 
-
+export interface UploadedProductAsset {
+  id: string;
+  sessionId: string;
+  mainImageDataUrl: string;
+  mainMimeType?: string;
+  packagingImageDataUrl?: string;
+  packagingMimeType?: string;
+  mainFileName?: string;
+  packagingFileName?: string;
+  createdAt: string;
+  lastUsedAt: string;
+  lastPresetId?: string;
+  renderCount?: number;
+}
