@@ -177,3 +177,6 @@ export const incrementProductRenderCount = async (productAssetId: string): Promi
     }
   }
 };
+
+export const updateProductRenderCount = incrementProductRenderCount;
+
