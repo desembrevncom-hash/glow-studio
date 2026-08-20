@@ -31,6 +31,18 @@ export const PHOTO_PRESETS: PhotoPreset[] = [
     negativePrompt: 'dramatic lighting, colored background, props, reflections',
     aspectRatio: '1:1'
   },
+  // clean_marketplace = ảnh catalog/e-commerce đơn giản (nền trắng trơn, không prop)
+  // premium_bright_studio = ảnh studio sáng cao cấp, dùng cho hero image, website, ads premium (có bóng đổ, phản chiếu, prop tối giản)
+  {
+    id: 'premium_bright_studio',
+    label: 'Premium Bright Studio',
+    style: 'Premium bright studio commercial photography, clean luxury skincare campaign, high-end cosmetic advertising, refined and elegant',
+    background: 'Bright white, soft ivory, or light warm grey studio backdrop with subtle glossy surface reflection and minimal premium props',
+    lighting: 'Large softbox studio lighting, bright but not overexposed, soft natural shadows, gentle rim light, clean highlights on product edges',
+    cameraDirection: 'Eye-level, centered hero product composition, slightly premium advertising angle',
+    negativePrompt: 'overexposed, washed out, cheap catalog look, harsh shadows, clutter, messy props, fake text, wrong logo, changed label, deformed bottle, distorted packaging, extra products, floating objects',
+    aspectRatio: '1:1'
+  },
   {
     id: 'social_ad_4_5',
     label: 'Social Media Ad (4:5)',

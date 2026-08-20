@@ -62,6 +62,14 @@ Background: Clean luxury bathroom vanity or spa setting (marble, wood accents, s
 Lighting: Soft natural window light, morning glow.
 Camera Direction: Natural lifestyle angle.`;
       break;
+    case 'premium_bright_studio':
+      presetInstructions = `
+Style: Premium bright studio commercial photography, clean luxury skincare campaign, high-end cosmetic advertising, refined and elegant.
+Background: Bright white, soft ivory, or light warm grey studio backdrop with subtle glossy surface reflection and minimal premium props.
+Lighting: Large softbox studio lighting, bright but not overexposed, soft natural shadows, gentle rim light, clean highlights on product edges.
+Camera Direction: Eye-level, centered hero product composition, slightly premium advertising angle.
+Avoid: overexposed, washed out, cheap catalog look, harsh shadows, clutter, messy props, fake text, wrong logo, changed label, deformed bottle, distorted packaging, extra products, floating objects.`;
+      break;
     default:
       // Fallback
       presetInstructions = `
