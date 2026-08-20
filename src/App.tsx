@@ -266,6 +266,9 @@ const App: React.FC = () => {
           <span>Brand Preservation</span>
           <span>Studio Depth</span>
         </div>
+        <div className="mt-4 opacity-50 text-[10px]">
+          Studio Glow version: 1.1.0 (Production)
+        </div>
       </footer>
     </div>
   );
