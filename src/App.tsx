@@ -20,7 +20,14 @@ import { optimizeImage } from './services/imageUtils';
 import ImageUploader from './components/ImageUploader';
 import { RenderHistory } from './components/RenderHistory';
 import { ProductUploadHistory } from './components/ProductUploadHistory';
-import { AppState, PhotoshootJob, PhotoshootMetadata, UploadedProductAsset } from './types';
+import {
+  AppState,
+  PhotoshootJob,
+  PhotoshootMetadata,
+  UploadedProductAsset,
+  SecondaryReferenceRole,
+  CompositionMode
+} from './types';
 import { PHOTO_PRESETS } from './constants/photoPresets';
 
 const App: React.FC = () => {
@@ -34,6 +41,8 @@ const App: React.FC = () => {
   const [selectedPreset, setSelectedPreset] = useState<string>('premium_bright_studio');
   const [aspectRatio, setAspectRatio] = useState<string>('1:1');
   const [outputQuality, setOutputQuality] = useState<string>('2k');
+  const [secondaryRole, setSecondaryRole] = useState<SecondaryReferenceRole>('packaging');
+  const [compositionMode, setCompositionMode] = useState<CompositionMode>('product_with_packaging');
   const [resultMetadata, setResultMetadata] = useState<PhotoshootMetadata | null>(null);
 
   // Product upload history state
@@ -132,6 +141,25 @@ const App: React.FC = () => {
     [mainProductImage, packagingImage, selectedPreset, loadProductHistory]
   );
 
+  const handleRoleChange = (role: SecondaryReferenceRole) => {
+    setSecondaryRole(role);
+    switch (role) {
+      case 'packaging':
+        setCompositionMode('product_with_packaging');
+        break;
+      case 'smaller_size':
+      case 'larger_size':
+        setCompositionMode('two_sizes');
+        break;
+      case 'companion_product':
+        setCompositionMode('product_pair');
+        break;
+      case 'background_packaging':
+        setCompositionMode('packaging_background');
+        break;
+    }
+  };
+
   const handleGeneratePhotoshoot = async () => {
     if (cooldown > 0) return;
 
@@ -139,6 +167,8 @@ const App: React.FC = () => {
       (img): img is { data: string; mimeType: string } => img !== null
     );
     if (imagesToProcess.length === 0) return;
+
+    const effectiveCompositionMode = packagingImage ? compositionMode : 'single_product';
 
     setAppState(AppState.PROCESSING);
     setError(null);
@@ -149,6 +179,8 @@ const App: React.FC = () => {
         presetId: selectedPreset,
         aspectRatio,
         outputQuality,
+        secondaryRole: packagingImage ? secondaryRole : undefined,
+        compositionMode: effectiveCompositionMode,
       });
       setProcessedImage(result.imageUrl);
       setResultMetadata(result.metadata || null);
@@ -299,10 +331,13 @@ const App: React.FC = () => {
       setPackagingImage({
         data: job.packagingImageUrl,
         mimeType: 'image/png',
-        name: 'Packaging from History',
+        name: 'Secondary Image from History',
       });
+      if (job.secondaryRole) setSecondaryRole(job.secondaryRole);
+      if (job.compositionMode) setCompositionMode(job.compositionMode);
     } else {
       setPackagingImage(null);
+      setCompositionMode('single_product');
     }
 
     setSelectedPreset(job.presetId || 'premium_bright_studio');
@@ -328,6 +363,8 @@ const App: React.FC = () => {
     setSelectedPreset('premium_bright_studio');
     setAspectRatio('1:1');
     setOutputQuality('2k');
+    setSecondaryRole('packaging');
+    setCompositionMode('product_with_packaging');
     setError(null);
     setCooldown(0);
   };
@@ -353,6 +390,8 @@ const App: React.FC = () => {
     setSelectedPreset('premium_bright_studio');
     setAspectRatio('1:1');
     setOutputQuality('2k');
+    setSecondaryRole('packaging');
+    setCompositionMode('product_with_packaging');
     setAppState(AppState.IDLE);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -432,7 +471,7 @@ const App: React.FC = () => {
               />
               <ImageUploader
                 id="packaging-box"
-                label="Box or Packaging (Vỏ hộp / Bao bì phụ)"
+                label="Secondary Reference (Ảnh phụ tuỳ chọn)"
                 onImageSelect={(file) => handleImageSelect(file, 2)}
                 selectedImage={packagingImage?.data || null}
                 isLoading={appState === AppState.PROCESSING}
@@ -508,6 +547,49 @@ const App: React.FC = () => {
                     <option value="standard">Standard - Nhanh chóng</option>
                   </select>
                 </div>
+
+                {/* Secondary Reference Role & Composition Controls */}
+                {packagingImage && (
+                  <>
+                    <div className="flex flex-col gap-2 md:col-span-1">
+                      <label htmlFor="secondary-role-select" className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                        Vai trò ảnh phụ
+                      </label>
+                      <select
+                        id="secondary-role-select"
+                        value={secondaryRole}
+                        onChange={(e) => handleRoleChange(e.target.value as SecondaryReferenceRole)}
+                        disabled={isGenerating}
+                        className="w-full p-3.5 rounded-xl bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:border-indigo-500 transition-colors appearance-none text-sm"
+                      >
+                        <option value="packaging">Vỏ hộp / Bao bì</option>
+                        <option value="smaller_size">Sản phẩm size nhỏ</option>
+                        <option value="larger_size">Sản phẩm size lớn</option>
+                        <option value="companion_product">Sản phẩm cùng dòng / Combo</option>
+                        <option value="background_packaging">Bao bì nền phía sau</option>
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col gap-2 md:col-span-2">
+                      <label htmlFor="composition-mode-select" className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                        Bố cục (Composition)
+                      </label>
+                      <select
+                        id="composition-mode-select"
+                        value={compositionMode}
+                        onChange={(e) => setCompositionMode(e.target.value as CompositionMode)}
+                        disabled={isGenerating}
+                        className="w-full p-3.5 rounded-xl bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:border-indigo-500 transition-colors appearance-none text-sm"
+                      >
+                        <option value="product_with_packaging">Sản phẩm + Vỏ hộp</option>
+                        <option value="two_sizes">2 size sản phẩm (Lớn + Nhỏ)</option>
+                        <option value="product_pair">Cặp sản phẩm (Combo)</option>
+                        <option value="packaging_background">Bao bì nền mờ</option>
+                        <option value="single_product">1 sản phẩm đơn</option>
+                      </select>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

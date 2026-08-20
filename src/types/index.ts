@@ -12,12 +12,30 @@ export enum AppState {
   ERROR = 'ERROR'
 }
 
+export type SecondaryReferenceRole =
+  | 'packaging'
+  | 'smaller_size'
+  | 'larger_size'
+  | 'companion_product'
+  | 'background_packaging';
+
+export type CompositionMode =
+  | 'single_product'
+  | 'product_with_packaging'
+  | 'two_sizes'
+  | 'product_pair'
+  | 'packaging_background';
+
 export interface PhotoRecipe {
   images: { data: string; mimeType: string }[];
   presetId: string;
   aspectRatio?: string;
   outputQuality?: string;
   sessionId?: string;
+  secondaryRole?: SecondaryReferenceRole;
+  compositionMode?: CompositionMode;
+  secondaryScale?: 'small' | 'medium' | 'large';
+  secondaryPlacement?: 'left' | 'right' | 'behind' | 'background';
 }
 
 export interface PhotoPreset {
@@ -39,6 +57,10 @@ export interface PhotoshootMetadata {
   outputQuality?: string;
   model?: string;
   durationMs?: number;
+  secondaryRole?: SecondaryReferenceRole;
+  compositionMode?: CompositionMode;
+  secondaryScale?: string;
+  secondaryPlacement?: string;
 }
 
 export interface PhotoshootResponse {
@@ -68,6 +90,10 @@ export interface PhotoshootJob {
   errorMessage?: string;
   originalJobId?: string;
   mode?: 'default' | 'rerender' | 'variation';
+  secondaryRole?: SecondaryReferenceRole;
+  compositionMode?: CompositionMode;
+  secondaryScale?: string;
+  secondaryPlacement?: string;
   createdAt: string;
   updatedAt: string;
 }

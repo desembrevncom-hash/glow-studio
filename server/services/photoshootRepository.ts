@@ -25,6 +25,10 @@ export interface PhotoshootJob {
   errorMessage?: string;
   originalJobId?: string;
   mode?: 'default' | 'rerender' | 'variation';
+  secondaryRole?: string;
+  compositionMode?: string;
+  secondaryScale?: string;
+  secondaryPlacement?: string;
   createdAt: string;
   updatedAt: string;
 }

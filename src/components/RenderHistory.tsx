@@ -52,6 +52,21 @@ export const RenderHistory: React.FC<RenderHistoryProps> = ({
     }
   };
 
+  const getCompositionLabel = (mode?: string) => {
+    switch (mode) {
+      case 'two_sizes':
+        return '2 Size';
+      case 'product_pair':
+        return 'Combo';
+      case 'packaging_background':
+        return 'Hộp nền';
+      case 'product_with_packaging':
+        return '+ Vỏ hộp';
+      default:
+        return null;
+    }
+  };
+
   return (
     <section id="history-section" className="w-full max-w-5xl space-y-6 mt-12">
       <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
@@ -91,6 +106,7 @@ export const RenderHistory: React.FC<RenderHistoryProps> = ({
             const isProcessing = actionInProgressId === job.id;
             const hasImage = Boolean(job.resultImageUrl);
             const hasSourceImage = Boolean(job.mainImageUrl);
+            const compLabel = getCompositionLabel(job.compositionMode);
 
             return (
               <div
@@ -125,6 +141,11 @@ export const RenderHistory: React.FC<RenderHistoryProps> = ({
                     <span className="bg-black/80 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-semibold text-zinc-400 border border-white/10">
                       {job.aspectRatio}
                     </span>
+                    {compLabel && (
+                      <span className="bg-zinc-800/90 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-semibold text-emerald-300 border border-emerald-500/30">
+                        {compLabel}
+                      </span>
+                    )}
                     {(job.mode === 'variation' || (Boolean(job.originalJobId) && job.mode !== 'rerender')) && (
                       <span className="bg-purple-900/80 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-bold text-purple-200 border border-purple-500/40">
                         Biến thể

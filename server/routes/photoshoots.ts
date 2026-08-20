@@ -34,6 +34,10 @@ interface GenerateParams {
   aspectRatio?: string;
   outputQuality?: string;
   sessionId?: string;
+  secondaryRole?: any;
+  compositionMode?: any;
+  secondaryScale?: string;
+  secondaryPlacement?: string;
   isVariation?: boolean;
   originalJobId?: string;
 }
@@ -45,7 +49,9 @@ async function processPhotoshootGeneration(params: GenerateParams) {
   const finalPresetId = params.presetId || 'premium_bright_studio';
   const inputAspectRatio = params.aspectRatio || '1:1';
   const inputQuality = params.outputQuality || '2k';
-  const hasPackaging = params.images.length > 1;
+  const hasSecondaryReference = params.images.length > 1;
+  const secondaryRole = params.secondaryRole || (hasSecondaryReference ? 'packaging' : undefined);
+  const compositionMode = params.compositionMode || (hasSecondaryReference ? 'product_with_packaging' : 'single_product');
 
   // Validate images
   for (const img of params.images) {
@@ -67,7 +73,15 @@ async function processPhotoshootGeneration(params: GenerateParams) {
   }
 
   const model = process.env.GEMINI_MODEL || "gemini-3.1-flash-image";
-  const promptText = buildPrompt(finalPresetId, hasPackaging, params.isVariation);
+  const promptText = buildPrompt({
+    presetId: finalPresetId,
+    hasSecondaryReference,
+    secondaryRole,
+    compositionMode,
+    secondaryScale: params.secondaryScale,
+    secondaryPlacement: params.secondaryPlacement,
+    isVariation: params.isVariation
+  });
 
   // Store input images
   const mainImageUrl = await storageService.uploadInputImage(params.images[0].data, {
@@ -77,7 +91,7 @@ async function processPhotoshootGeneration(params: GenerateParams) {
   });
 
   let packagingImageUrl: string | undefined = undefined;
-  if (hasPackaging) {
+  if (hasSecondaryReference) {
     packagingImageUrl = await storageService.uploadInputImage(params.images[1].data, {
       sessionId,
       type: 'packaging',
@@ -99,7 +113,11 @@ async function processPhotoshootGeneration(params: GenerateParams) {
     packagingImageUrl,
     promptText,
     originalJobId: params.originalJobId,
-    mode
+    mode,
+    secondaryRole,
+    compositionMode,
+    secondaryScale: params.secondaryScale,
+    secondaryPlacement: params.secondaryPlacement
   });
 
   const ai = getGeminiClient();
@@ -287,7 +305,11 @@ async function processPhotoshootGeneration(params: GenerateParams) {
       aspectRatio: inputAspectRatio,
       outputQuality: inputQuality,
       model,
-      durationMs
+      durationMs,
+      secondaryRole,
+      compositionMode,
+      secondaryScale: params.secondaryScale,
+      secondaryPlacement: params.secondaryPlacement
     }
   };
 }
@@ -329,7 +351,17 @@ const generateHandler = async (req: any, res: any) => {
   isGenerating = true;
 
   try {
-    const { images, presetId, aspectRatio, outputQuality, sessionId } = req.body;
+    const {
+      images,
+      presetId,
+      aspectRatio,
+      outputQuality,
+      sessionId,
+      secondaryRole,
+      compositionMode,
+      secondaryScale,
+      secondaryPlacement
+    } = req.body;
 
     if (!images || !Array.isArray(images) || images.length === 0) {
       return res.status(400).json({ error: "Vui lòng tải lên ít nhất 1 hình ảnh sản phẩm.", code: "INVALID_IMAGE" });
@@ -340,7 +372,11 @@ const generateHandler = async (req: any, res: any) => {
       presetId,
       aspectRatio,
       outputQuality,
-      sessionId
+      sessionId,
+      secondaryRole,
+      compositionMode,
+      secondaryScale,
+      secondaryPlacement
     });
 
     return res.json(result);
@@ -414,7 +450,11 @@ router.post("/photoshoots/:id/rerender", async (req: any, res: any) => {
       outputQuality: originalJob.outputQuality,
       sessionId: requestSessionId || originalJob.sessionId,
       isVariation: false,
-      originalJobId: originalJob.id
+      originalJobId: originalJob.id,
+      secondaryRole: originalJob.secondaryRole,
+      compositionMode: originalJob.compositionMode,
+      secondaryScale: originalJob.secondaryScale,
+      secondaryPlacement: originalJob.secondaryPlacement
     });
 
     return res.json(result);
@@ -480,9 +520,13 @@ router.post("/photoshoots/:id/variation", async (req: any, res: any) => {
       presetId: originalJob.presetId,
       aspectRatio: originalJob.aspectRatio,
       outputQuality: originalJob.outputQuality,
-      sessionId: originalJob.sessionId,
+      sessionId: requestSessionId || originalJob.sessionId,
       isVariation: true,
-      originalJobId: originalJob.id
+      originalJobId: originalJob.id,
+      secondaryRole: originalJob.secondaryRole,
+      compositionMode: originalJob.compositionMode,
+      secondaryScale: originalJob.secondaryScale,
+      secondaryPlacement: originalJob.secondaryPlacement
     });
 
     return res.json(result);
