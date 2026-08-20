@@ -32,15 +32,15 @@ export const PHOTO_PRESETS: PhotoPreset[] = [
     aspectRatio: '1:1'
   },
   // clean_marketplace = ảnh catalog/e-commerce đơn giản (nền trắng trơn, không prop)
-  // premium_bright_studio = ảnh studio sáng cao cấp, dùng cho hero image, website, ads premium (có bóng đổ, phản chiếu, prop tối giản)
+  // premium_bright_studio / Premium Clean Studio = ảnh studio sáng cao cấp, dùng cho hero image, website, ads premium (nền trắng hoặc ghi sáng, KHÔNG đạo cụ rườm rà)
   {
     id: 'premium_bright_studio',
-    label: 'Premium Bright Studio',
-    style: 'Premium bright studio commercial photography, clean luxury skincare campaign, high-end cosmetic advertising, refined and elegant',
-    background: 'Bright white, soft ivory, or light warm grey studio backdrop with subtle glossy surface reflection and minimal premium props',
-    lighting: 'Large softbox studio lighting, bright but not overexposed, soft natural shadows, gentle rim light, clean highlights on product edges',
-    cameraDirection: 'Eye-level, centered hero product composition, slightly premium advertising angle',
-    negativePrompt: 'overexposed, washed out, cheap catalog look, harsh shadows, clutter, messy props, fake text, wrong logo, changed label, deformed bottle, distorted packaging, extra products, floating objects',
+    label: 'Premium Clean Studio',
+    style: 'Premium clean studio product photography, minimalist high-end cosmetic product image, elegant e-commerce hero shot, clean commercial beauty photography',
+    background: 'Plain white, off-white, or light warm gray seamless studio background. No lifestyle scene. No decorative props. Subtle floor contact shadow only.',
+    lighting: 'Bright softbox lighting, evenly lit product, soft realistic shadow under the product, gentle highlight on bottle edges, no dramatic mood, no overexposure',
+    cameraDirection: 'Straight-on eye-level hero product composition, centered, upright product, label facing camera, product fills 70-80% of frame',
+    negativePrompt: 'flowers, leaves, plants, crystals, stones, water drops, towels, bathroom, marble props, spa scene, lifestyle background, clutter, extra objects, extra products, fake text, changed logo, wrong label, deformed bottle, distorted cap, messy reflection, dark background, dramatic shadows, overexposed, washed out',
     aspectRatio: '1:1'
   },
   {

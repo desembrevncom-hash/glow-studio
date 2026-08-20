@@ -64,11 +64,20 @@ Camera Direction: Natural lifestyle angle.`;
       break;
     case 'premium_bright_studio':
       presetInstructions = `
-Style: Premium bright studio commercial photography, clean luxury skincare campaign, high-end cosmetic advertising, refined and elegant.
-Background: Bright white, soft ivory, or light warm grey studio backdrop with subtle glossy surface reflection and minimal premium props.
-Lighting: Large softbox studio lighting, bright but not overexposed, soft natural shadows, gentle rim light, clean highlights on product edges.
-Camera Direction: Eye-level, centered hero product composition, slightly premium advertising angle.
-Avoid: overexposed, washed out, cheap catalog look, harsh shadows, clutter, messy props, fake text, wrong logo, changed label, deformed bottle, distorted packaging, extra products, floating objects.`;
+Style: Premium clean studio product photography, minimalist high-end cosmetic product image, elegant e-commerce hero shot, clean commercial beauty photography.
+Background: Plain white, off-white, or light warm gray seamless studio background. No lifestyle scene. No decorative props. Subtle floor contact shadow only.
+Lighting: Bright softbox lighting, evenly lit product, soft realistic shadow under the product, gentle highlight on bottle edges, no dramatic mood, no overexposure.
+Camera Direction: Straight-on eye-level hero product composition, centered, upright product, label facing camera, product fills 70-80% of frame.
+Avoid: flowers, leaves, plants, crystals, stones, water drops, towels, bathroom, marble props, spa scene, lifestyle background, clutter, extra objects, extra products, fake text, changed logo, wrong label, deformed bottle, distorted cap, messy reflection, dark background, dramatic shadows, overexposed, washed out.
+
+CRITICAL PRESET RULES:
+- The product must stand alone as the hero object.
+- Keep the product upright and centered.
+- Keep the original bottle shape, cap, label layout, logo, and color.
+- Do not invent new label text.
+- Do not add extra products.
+- Allow only subtle contact shadow and very light floor reflection.
+${hasPackaging ? '- Packaging image (Reference Image 2) should either be omitted or placed very minimally behind the product, only if it does not create clutter. If packaging makes the scene busy, prioritize the main product only.' : ''}`;
       break;
     default:
       // Fallback

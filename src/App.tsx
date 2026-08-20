@@ -30,7 +30,7 @@ const App: React.FC = () => {
   }, []);
 
   const [cooldown, setCooldown] = useState<number>(0);
-  const [selectedPreset, setSelectedPreset] = useState<string>('premium_black_glow');
+  const [selectedPreset, setSelectedPreset] = useState<string>('premium_bright_studio');
   const [aspectRatio, setAspectRatio] = useState<string>('4:5');
   const [outputQuality, setOutputQuality] = useState<string>('2k');
 
