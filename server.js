@@ -105,10 +105,18 @@ app.post('/api/generate', async (req, res) => {
         errorString.includes("503") ||
         errorString.includes("high demand") ||
         errorString.includes("unavailable");
+        
+      const isQuotaExceeded = 
+        errorStatus === 429 ||
+        errorStatus === "429" ||
+        errorString.includes("429") ||
+        errorString.includes("quota exceeded") ||
+        errorString.includes("resource_exhausted");
 
       console.error(`Gemini AI Status (Attempt ${attempts}/${maxAttempts}):`, {
         status: errorStatus,
         isHighDemand,
+        isQuotaExceeded,
         message: errorMessage
       });
 
@@ -123,12 +131,16 @@ app.post('/api/generate', async (req, res) => {
         return res.status(400).json({ error: "LỖI API KEY: Không tìm thấy Project hoặc chưa bật Billing. Vui lòng kiểm tra lại API Key." });
       }
 
+      if (isQuotaExceeded) {
+        return res.status(429).json({ error: "LỖI HẠN MỨC (QUOTA): API Key của bạn đã hết lượt sử dụng miễn phí hoặc chưa được cấu hình thanh toán. Vui lòng kiểm tra lại giới hạn trong Google AI Studio." });
+      }
+
       if (isHighDemand) {
         return res.status(503).json({ error: "Hệ thống AI hiện đang quá tải do lượt truy cập cao. Vui lòng đợi khoảng 30 giây rồi thử lại." });
       }
       
       if (attempts >= maxAttempts) {
-         return res.status(500).json({ error: errorMessage || "Gặp sự cố khi xử lý ảnh sau nhiều lần thử lại." });
+         return res.status(500).json({ error: "Gặp sự cố khi xử lý ảnh từ Gemini API. Xin vui lòng thử lại sau." });
       }
     }
   }
