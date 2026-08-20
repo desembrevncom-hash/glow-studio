@@ -17,6 +17,7 @@ export interface PhotoRecipe {
   presetId: string;
   aspectRatio?: string;
   outputQuality?: string;
+  sessionId?: string;
 }
 
 export interface PhotoPreset {
@@ -39,7 +40,33 @@ export interface PhotoshootMetadata {
 }
 
 export interface PhotoshootResponse {
+  success?: boolean;
+  jobId?: string;
   imageUrl: string;
   metadata?: PhotoshootMetadata;
 }
+
+export type PhotoshootJobStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+
+export interface PhotoshootJob {
+  id: string;
+  sessionId: string;
+  status: PhotoshootJobStatus;
+  presetId: string;
+  aspectRatio: string;
+  outputQuality: string;
+  model: string;
+  mainImageUrl: string;
+  packagingImageUrl?: string;
+  resultImageUrl?: string;
+  promptText: string;
+  negativePrompt?: string;
+  durationMs?: number;
+  errorCode?: string;
+  errorMessage?: string;
+  originalJobId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 

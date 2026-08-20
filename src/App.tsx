@@ -1,8 +1,15 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { generateProductPhotoshoot } from './services/geminiService';
+import {
+  generateProductPhotoshoot,
+  getPhotoshootHistory,
+  rerenderPhotoshoot,
+  variationPhotoshoot,
+  deletePhotoshoot
+} from './services/geminiService';
 import { optimizeImage } from './services/imageUtils';
 import ImageUploader from './components/ImageUploader';
-import { AppState } from './types';
+import { RenderHistory } from './components/RenderHistory';
+import { AppState, PhotoshootJob, PhotoshootMetadata } from './types';
 import { PHOTO_PRESETS } from './constants/photoPresets';
 
 const App: React.FC = () => {
@@ -11,6 +18,41 @@ const App: React.FC = () => {
   const [packagingImage, setPackagingImage] = useState<{ data: string; mimeType: string } | null>(null);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [cooldown, setCooldown] = useState<number>(0);
+  const [selectedPreset, setSelectedPreset] = useState<string>('premium_bright_studio');
+  const [aspectRatio, setAspectRatio] = useState<string>('1:1');
+  const [outputQuality, setOutputQuality] = useState<string>('2k');
+  const [resultMetadata, setResultMetadata] = useState<PhotoshootMetadata | null>(null);
+
+  // History state
+  const [history, setHistory] = useState<PhotoshootJob[]>([]);
+  const [isHistoryLoading, setIsHistoryLoading] = useState<boolean>(false);
+  const [actionInProgressId, setActionInProgressId] = useState<string | null>(null);
+
+  const loadHistory = useCallback(async () => {
+    try {
+      setIsHistoryLoading(true);
+      const jobs = await getPhotoshootHistory();
+      setHistory(jobs);
+    } catch (e) {
+      console.warn("Could not load photoshoot history:", e);
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
+
+  useEffect(() => {
+    let timer: any;
+    if (cooldown > 0) {
+      timer = setInterval(() => setCooldown((c) => c - 1), 1000);
+    }
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   const handleImageSelect = useCallback(async (file: File, index: 1 | 2) => {
     try {
@@ -28,20 +70,6 @@ const App: React.FC = () => {
       setError("Không thể đọc tệp hình ảnh. Vui lòng chọn tệp hình ảnh hợp lệ (PNG, JPG, WebP).");
     }
   }, []);
-
-  const [cooldown, setCooldown] = useState<number>(0);
-  const [selectedPreset, setSelectedPreset] = useState<string>('premium_bright_studio');
-  const [aspectRatio, setAspectRatio] = useState<string>('1:1');
-  const [outputQuality, setOutputQuality] = useState<string>('2k');
-  const [resultMetadata, setResultMetadata] = useState<any>(null);
-
-  useEffect(() => {
-    let timer: any;
-    if (cooldown > 0) {
-      timer = setInterval(() => setCooldown((c) => c - 1), 1000);
-    }
-    return () => clearInterval(timer);
-  }, [cooldown]);
 
   const handleGeneratePhotoshoot = async () => {
     if (cooldown > 0) return;
@@ -62,6 +90,7 @@ const App: React.FC = () => {
       setProcessedImage(result.imageUrl);
       setResultMetadata(result.metadata || null);
       setAppState(AppState.COMPLETED);
+      loadHistory();
     } catch (err: any) {
       const msg = err.message || "Đã xảy ra lỗi trong quá trình tạo ảnh. Vui lòng thử lại.";
       setError(msg);
@@ -70,7 +99,74 @@ const App: React.FC = () => {
       if (err.retryAfterSeconds) {
         setCooldown(err.retryAfterSeconds);
       }
+      loadHistory();
     }
+  };
+
+  const handleRerender = async (job: PhotoshootJob) => {
+    if (actionInProgressId || appState === AppState.PROCESSING) return;
+    setActionInProgressId(job.id);
+    setError(null);
+
+    try {
+      const result = await rerenderPhotoshoot(job.id);
+      setProcessedImage(result.imageUrl);
+      setResultMetadata(result.metadata || null);
+      setAppState(AppState.COMPLETED);
+      loadHistory();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err: any) {
+      setError(err.message || "Không thể render lại ảnh.");
+    } finally {
+      setActionInProgressId(null);
+    }
+  };
+
+  const handleVariation = async (job: PhotoshootJob) => {
+    if (actionInProgressId || appState === AppState.PROCESSING) return;
+    setActionInProgressId(job.id);
+    setError(null);
+
+    try {
+      const result = await variationPhotoshoot(job.id);
+      setProcessedImage(result.imageUrl);
+      setResultMetadata(result.metadata || null);
+      setAppState(AppState.COMPLETED);
+      loadHistory();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err: any) {
+      setError(err.message || "Không thể tạo biến thể ảnh.");
+    } finally {
+      setActionInProgressId(null);
+    }
+  };
+
+  const handleDelete = async (jobId: string) => {
+    if (actionInProgressId) return;
+    setActionInProgressId(jobId);
+
+    try {
+      await deletePhotoshoot(jobId);
+      setHistory((prev) => prev.filter((j) => j.id !== jobId));
+    } catch (err: any) {
+      console.error("Delete failed:", err);
+    } finally {
+      setActionInProgressId(null);
+    }
+  };
+
+  const handleSelectResult = (job: PhotoshootJob) => {
+    if (!job.resultImageUrl) return;
+    setProcessedImage(job.resultImageUrl);
+    setResultMetadata({
+      presetId: job.presetId,
+      aspectRatio: job.aspectRatio,
+      outputQuality: job.outputQuality,
+      model: job.model,
+      durationMs: job.durationMs
+    });
+    setAppState(AppState.COMPLETED);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const reset = () => {
@@ -268,6 +364,16 @@ const App: React.FC = () => {
             </div>
           </section>
         )}
+
+        <RenderHistory
+          history={history}
+          isLoading={isHistoryLoading}
+          onRerender={handleRerender}
+          onVariation={handleVariation}
+          onDelete={handleDelete}
+          onSelectResult={handleSelectResult}
+          actionInProgressId={actionInProgressId}
+        />
       </main>
 
       <footer id="app-footer" className="mt-20 text-zinc-600 text-xs font-semibold tracking-widest uppercase flex flex-col items-center gap-4">

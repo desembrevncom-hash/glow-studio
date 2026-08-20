@@ -1,6 +1,6 @@
 import { PHOTO_PRESETS } from "../../shared/photoPresets";
 
-export const buildPrompt = (presetId: string, hasPackaging: boolean): string => {
+export const buildPrompt = (presetId: string, hasPackaging: boolean, isVariation?: boolean): string => {
   // Common instructions for ALL presets
   const baseInstructions = `Create a brand-new premium commercial cosmetics product photoshoot based strictly on the uploaded reference images.
   
@@ -56,6 +56,11 @@ CRITICAL PRESET RULES:
 - Allow only subtle contact shadow and very light floor reflection.`;
   }
 
-  return `${baseInstructions}\n${packagingInstructions}\n${presetInstructions}`;
+  const variationInstruction = isVariation
+    ? `\n\nVARIATION DIRECTIVE:\n- Create a new composition variation while preserving product identity, label, logo, shape, and color.`
+    : '';
+
+  return `${baseInstructions}\n${packagingInstructions}\n${presetInstructions}${variationInstruction}`;
 };
+
 
