@@ -566,11 +566,11 @@ const App: React.FC = () => {
                           disabled={isGenerating}
                           className="w-full p-3.5 rounded-xl bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:border-indigo-500 transition-colors appearance-none text-sm mt-1"
                         >
-                          <option value="packaging">Ảnh phụ là vỏ hộp / bao bì</option>
-                          <option value="smaller_size">Ảnh phụ là bản size nhỏ</option>
-                          <option value="larger_size">Ảnh phụ là bản size lớn</option>
-                          <option value="companion_product">Ảnh phụ là sản phẩm khác trong combo</option>
-                          <option value="background_packaging">Ảnh phụ là hộp dùng làm nền phía sau</option>
+                          <option value="packaging">Vỏ hộp / Bao bì sản phẩm</option>
+                          <option value="smaller_size">Chai/hũ size nhỏ</option>
+                          <option value="larger_size">Chai/hũ size lớn</option>
+                          <option value="companion_product">Sản phẩm khác cùng bộ</option>
+                          <option value="background_packaging">Vỏ hộp đặt mờ phía sau</option>
                         </select>
                       </div>
 
@@ -588,28 +588,35 @@ const App: React.FC = () => {
                           disabled={isGenerating}
                           className="w-full p-3.5 rounded-xl bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:border-indigo-500 transition-colors appearance-none text-sm mt-1"
                         >
-                          <option value="product_with_packaging">Sản phẩm chính + hộp bên cạnh</option>
-                          <option value="two_sizes">Hai size đứng cạnh nhau</option>
-                          <option value="product_pair">Combo / cặp sản phẩm</option>
-                          <option value="packaging_background">Hộp làm nền phía sau</option>
-                          <option value="single_product">Chỉ chụp 1 sản phẩm chính</option>
+                          <option value="product_with_packaging">Sản phẩm chính + vỏ hộp</option>
+                          <option value="two_sizes">Chai lớn + chai nhỏ</option>
+                          <option value="product_pair">Bộ sản phẩm / Combo</option>
+                          <option value="packaging_background">Vỏ hộp mờ phía sau</option>
+                          <option value="single_product">Chỉ sản phẩm chính</option>
                         </select>
                       </div>
                     </div>
 
                     {/* Dynamic Helper Note */}
-                    <div className="p-3.5 rounded-xl bg-indigo-950/20 border border-indigo-500/30 text-xs text-indigo-300 flex items-start gap-2.5">
-                      <span className="text-base leading-none">💡</span>
-                      <span className="leading-relaxed">
+                    <div className="p-3.5 rounded-xl bg-indigo-950/20 border border-indigo-500/30 text-xs text-indigo-300 flex flex-col gap-1.5">
+                      <div className="flex items-start gap-2 text-zinc-400">
+                        <span className="text-sm leading-none">💡</span>
+                        <span className="leading-relaxed">
+                          <strong className="text-indigo-200">Mẹo:</strong> Chọn đúng vai trò ảnh phụ giúp AI không biến vỏ hộp thành chai/lọ hoặc bỏ sót sản phẩm phụ.
+                        </span>
+                      </div>
+                      <div className="pl-5 text-indigo-200 leading-relaxed border-t border-indigo-500/20 pt-1.5 mt-0.5">
                         {secondaryRole === 'packaging' &&
-                          'Kết quả mong muốn: sản phẩm chính đứng trước, vỏ hộp ở sau hoặc bên cạnh, không che nhãn.'}
-                        {(secondaryRole === 'smaller_size' || secondaryRole === 'larger_size') &&
-                          'Kết quả mong muốn: chai lớn và chai nhỏ đứng cạnh nhau, nhãn đều quay ra trước.'}
+                          'Dùng khi ảnh phụ là hộp giấy, bao bì hoặc vỏ hộp. AI sẽ đặt hộp sau hoặc cạnh sản phẩm chính.'}
+                        {secondaryRole === 'smaller_size' &&
+                          'Dùng khi ảnh phụ là phiên bản mini/travel-size. AI sẽ đặt chai nhỏ cạnh chai chính.'}
+                        {secondaryRole === 'larger_size' &&
+                          'Dùng khi ảnh phụ là phiên bản dung tích lớn. AI sẽ đặt chai lớn và chai chính cạnh nhau.'}
                         {secondaryRole === 'companion_product' &&
-                          'Kết quả mong muốn: hai sản phẩm cùng bộ được chụp như combo, cân đối và sạch.'}
+                          'Dùng khi ảnh phụ là sản phẩm khác cùng bộ, ví dụ serum + cleanser.'}
                         {secondaryRole === 'background_packaging' &&
-                          'Kết quả mong muốn: sản phẩm chính nổi bật, hộp chỉ làm nền nhẹ phía sau.'}
-                      </span>
+                          'Dùng khi bạn muốn vỏ hộp chỉ làm nền nhẹ phía sau, không nổi bật hơn sản phẩm chính.'}
+                      </div>
                     </div>
                   </div>
                 )}
