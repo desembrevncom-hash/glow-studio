@@ -9,7 +9,8 @@ interface RenderHistoryProps {
   onVariation: (job: PhotoshootJob) => void;
   onDelete: (jobId: string) => void;
   onSelectResult: (job: PhotoshootJob) => void;
-  onReuseJobProduct: (job: PhotoshootJob) => void;
+  onReuseJobProduct?: (job: PhotoshootJob) => void;
+  onReuseProductFromJob?: (job: PhotoshootJob) => void;
   onClearHistory: () => void;
   actionInProgressId: string | null;
 }
@@ -22,9 +23,12 @@ export const RenderHistory: React.FC<RenderHistoryProps> = ({
   onDelete,
   onSelectResult,
   onReuseJobProduct,
+  onReuseProductFromJob,
   onClearHistory,
   actionInProgressId
 }) => {
+  const handleReuse = onReuseProductFromJob || onReuseJobProduct;
+
   const getPresetName = (presetId: string) => {
     return PHOTO_PRESETS.find((p) => p.id === presetId)?.label || presetId;
   };
@@ -193,12 +197,12 @@ export const RenderHistory: React.FC<RenderHistoryProps> = ({
                       </button>
                     </div>
 
-                    {hasSourceImage && (
+                    {hasSourceImage && handleReuse && (
                       <button
-                        onClick={() => onReuseJobProduct(job)}
+                        onClick={() => handleReuse(job)}
                         className="w-full py-1.5 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-200 text-[11px] font-medium transition-colors text-center"
                       >
-                        ↩ Dùng lại sản phẩm này cho workspace
+                        ↩ Dùng lại sản phẩm này
                       </button>
                     )}
                   </div>

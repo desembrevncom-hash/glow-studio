@@ -615,6 +615,7 @@ const App: React.FC = () => {
           onVariation={handleVariation}
           onDelete={handleDeleteRenderJob}
           onSelectResult={handleSelectResult}
+          onReuseProductFromJob={handleReuseJobProduct}
           onReuseJobProduct={handleReuseJobProduct}
           onClearHistory={handleClearRenderHistory}
           actionInProgressId={actionInProgressId}
