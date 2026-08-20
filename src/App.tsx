@@ -464,6 +464,7 @@ const App: React.FC = () => {
               <ImageUploader
                 id="main-product"
                 label="Main Product (Ảnh sản phẩm chính)"
+                description="Ảnh chai/lọ/hũ sản phẩm chính cần chụp hình."
                 onImageSelect={(file) => handleImageSelect(file, 1)}
                 selectedImage={mainProductImage?.data || null}
                 isLoading={appState === AppState.PROCESSING}
@@ -472,6 +473,7 @@ const App: React.FC = () => {
               <ImageUploader
                 id="packaging-box"
                 label="Secondary Reference (Ảnh phụ tuỳ chọn)"
+                description="Có thể là vỏ hộp, chai size nhỏ/lớn hoặc sản phẩm khác cùng bộ."
                 onImageSelect={(file) => handleImageSelect(file, 2)}
                 selectedImage={packagingImage?.data || null}
                 isLoading={appState === AppState.PROCESSING}
