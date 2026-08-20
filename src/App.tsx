@@ -1,8 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { generateProductPhotoshoot } from './services/geminiService';
 import { optimizeImage } from './services/imageUtils';
 import ImageUploader from './components/ImageUploader';
 import { AppState } from './types';
+import { PHOTO_PRESETS } from './constants/photoPresets';
 
 const App: React.FC = () => {
   const [appState, setAppState] = useState<AppState>(AppState.IDLE);
@@ -29,6 +30,7 @@ const App: React.FC = () => {
   }, []);
 
   const [cooldown, setCooldown] = useState<number>(0);
+  const [selectedPreset, setSelectedPreset] = useState<string>('premium_black_glow');
 
   useEffect(() => {
     let timer: any;
@@ -48,7 +50,7 @@ const App: React.FC = () => {
     setError(null);
 
     try {
-      const resultUrl = await generateProductPhotoshoot(imagesToProcess);
+      const resultUrl = await generateProductPhotoshoot(imagesToProcess, selectedPreset);
       setProcessedImage(resultUrl);
       setAppState(AppState.COMPLETED);
     } catch (err: any) {
@@ -116,6 +118,21 @@ const App: React.FC = () => {
                 selectedImage={packagingImage?.data || null}
                 isLoading={appState === AppState.PROCESSING}
               />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="preset-select" className="text-sm font-bold text-zinc-400 uppercase tracking-widest">Phong cách ảnh (Preset)</label>
+              <select 
+                id="preset-select"
+                value={selectedPreset}
+                onChange={(e) => setSelectedPreset(e.target.value)}
+                disabled={isGenerating}
+                className="w-full p-4 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all appearance-none"
+              >
+                {PHOTO_PRESETS.map(preset => (
+                  <option key={preset.id} value={preset.id}>{preset.label}</option>
+                ))}
+              </select>
             </div>
 
             <button
