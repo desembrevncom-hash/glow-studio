@@ -11,7 +11,18 @@ export const generateProductPhotoshoot = async (
     body: JSON.stringify(recipe)
   });
 
-  const data = await response.json();
+  const contentType = response.headers.get("content-type");
+  if (response.status === 404 || (contentType && contentType.includes("text/html"))) {
+    throw new Error('Không tìm thấy endpoint /api/photoshoots. Bản publish hiện tại chưa chạy backend Node.js (Vui lòng deploy bản production qua Cloud Run).');
+  }
+
+  let data;
+  try {
+    data = await response.json();
+  } catch (err) {
+    console.error("Non-JSON Response", response.status, contentType);
+    throw new Error('Backend API không khả dụng. Vui lòng deploy bản production qua Cloud Run.');
+  }
 
   if (!response.ok) {
     let errorMsg = data.error || 'Đã xảy ra lỗi hệ thống.';
