@@ -24,6 +24,36 @@ const App: React.FC = () => {
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [isKeySelected, setIsKeySelected] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkKey = async () => {
+      try {
+        if (window.aistudio && window.aistudio.hasSelectedApiKey) {
+          const selected = await window.aistudio.hasSelectedApiKey();
+          setIsKeySelected(selected);
+        } else {
+          // If not running in AI Studio, assume key is provided via env
+          setIsKeySelected(true);
+        }
+      } catch (e) {
+        setIsKeySelected(false);
+      }
+    };
+    checkKey();
+  }, []);
+
+  const handleOpenKeySelector = async () => {
+    try {
+      if (window.aistudio && window.aistudio.openSelectKey) {
+        await window.aistudio.openSelectKey();
+        setIsKeySelected(true);
+      }
+    } catch (e) {
+      console.error("Failed to open key selector", e);
+    }
+  };
+
   const handleImageSelect = useCallback((file: File, index: 1 | 2) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -57,8 +87,19 @@ const App: React.FC = () => {
       setProcessedImage(resultUrl);
       setAppState(AppState.COMPLETED);
     } catch (err: any) {
-      setError(err.message || "Đã xảy ra lỗi trong quá trình tạo ảnh.");
+      let msg = err.message || "Đã xảy ra lỗi trong quá trình tạo ảnh. Vui lòng thử lại.";
+      if (msg.includes("Thiếu Gemini API key")) {
+         setIsKeySelected(false);
+      }
+      setError(msg);
       setAppState(AppState.ERROR);
+    } finally {
+      // Đảm bảo nút không bị loading vĩnh viễn
+      if (appState === AppState.PROCESSING) {
+         // AppState.PROCESSING check is a bit stale due to closure, but we set state depending on success/error above.
+         // Actually, setAppState(AppState.ERROR/COMPLETED) handles it.
+         // We just don't want it to hang. If it reaches here and is still PROCESSING, something weird happened.
+      }
     }
   };
 
@@ -71,6 +112,34 @@ const App: React.FC = () => {
   };
 
   const hasImages = mainProductImage !== null || packagingImage !== null;
+
+  if (isKeySelected === false) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[#080808] text-white text-center">
+        <div className="max-w-md space-y-8 animate-in fade-in zoom-in duration-500">
+          <div className="w-20 h-20 bg-indigo-600 rounded-3xl mx-auto flex items-center justify-center shadow-[0_0_50px_rgba(79,70,229,0.4)]">
+            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+            </svg>
+          </div>
+          <h1 className="text-4xl font-black tracking-tight">Setup Studio Glow</h1>
+          <p className="text-zinc-400">
+            Thiếu Gemini API key. Vui lòng chọn hoặc cấu hình API key trước khi tạo ảnh để thực hiện dựng và thiết kế hình ảnh 2K.
+          </p>
+          <button
+            onClick={handleOpenKeySelector}
+            className="w-full py-5 px-8 bg-white text-black rounded-2xl font-black text-xl hover:bg-zinc-200 transition-all active:scale-[0.97]"
+          >
+            Chọn API Key
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isKeySelected === null) {
+    return <div className="min-h-screen bg-[#080808] flex items-center justify-center text-zinc-800 font-black tracking-widest uppercase">Initializing...</div>;
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center py-12 px-4 bg-[#080808] text-white">

@@ -24,22 +24,117 @@ export const processStudioImage = async (images: { data: string, mimeType: strin
 };
 
 export const generateProductPhotoshoot = async (images: { data: string, mimeType: string }[]): Promise<string> => {
-  const response = await fetch('/api/generate', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ images })
-  });
+  const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("Thiếu Gemini API key. Vui lòng chọn hoặc cấu hình API key trước khi tạo ảnh.");
+  }
+  const ai = new GoogleGenAI({ apiKey });
+  
+  let attempts = 0;
+  const maxAttempts = 5;
 
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error || 'Failed to generate image from server.');
+  while (attempts < maxAttempts) {
+    try {
+      const parts = images.map(img => ({
+        inlineData: {
+          data: img.data.split(',')[1],
+          mimeType: img.mimeType,
+        }
+      }));
+
+      // Create a 60-second timeout promise
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("Request quá thời gian 60 giây. Vui lòng thử lại.")), 60000);
+      });
+
+      const responsePromise = ai.models.generateContent({
+        model: 'gemini-3-pro-image-preview',
+        contents: {
+          parts: [...parts, { text: genericCosmeticsPrompt }],
+        },
+        config: {
+          imageConfig: {
+            aspectRatio: "1:1",
+            imageSize: "2K"
+          }
+        }
+      });
+
+      // Race between the API call and the timeout
+      const response = await Promise.race([responsePromise, timeoutPromise]);
+
+      if (!response.candidates || response.candidates.length === 0) {
+        throw new Error("Không nhận được phản hồi từ AI. Vui lòng thử lại.");
+      }
+
+      const candidate = response.candidates[0];
+      if (candidate.finishReason === 'SAFETY' || candidate.finishReason === 'OTHER') {
+        throw new Error(`AI từ chối xử lý nội dung này (Lý do: ${candidate.finishReason}). Vui lòng thử ảnh khác.`);
+      }
+
+      for (const part of candidate.content.parts) {
+        if (part.inlineData) {
+          return `data:image/png;base64,${part.inlineData.data}`;
+        }
+      }
+      
+      throw new Error("Không nhận được dữ liệu hình ảnh từ API");
+    } catch (error: any) {
+      attempts++;
+      const errorMessage = error?.message || "";
+      const errorStatus = error?.status;
+      const errorString = JSON.stringify(error).toLowerCase();
+      
+      const isHighDemand = 
+        errorStatus === 503 ||
+        errorStatus === "503" ||
+        errorStatus === "UNAVAILABLE" ||
+        errorMessage.includes("503") || 
+        errorMessage.toLowerCase().includes("high demand") || 
+        errorMessage.toLowerCase().includes("overloaded") ||
+        errorString.includes("503") ||
+        errorString.includes("high demand") ||
+        errorString.includes("unavailable");
+        
+      const isQuotaExceeded = 
+        errorStatus === 429 ||
+        errorStatus === "429" ||
+        errorString.includes("429") ||
+        errorString.includes("quota exceeded") ||
+        errorString.includes("resource_exhausted");
+
+      console.error(`Gemini AI Status (Attempt ${attempts}/${maxAttempts}):`, {
+        status: errorStatus,
+        isHighDemand,
+        isQuotaExceeded,
+        message: errorMessage
+      });
+
+      if (isHighDemand && attempts < maxAttempts) {
+        const waitTime = Math.pow(3, attempts) * 1000 + (Math.random() * 2000);
+        console.warn(`Hệ thống đang bận. Đang thử lại sau ${Math.round(waitTime/1000)}s...`);
+        await delay(waitTime);
+        continue;
+      }
+
+      if (errorMessage.includes("Requested entity was not found") || errorString.includes("not found")) {
+        throw new Error("LỖI API KEY: Không tìm thấy Project hoặc chưa bật Billing. Vui lòng kiểm tra lại API Key.");
+      }
+      
+      if (isQuotaExceeded) {
+        throw new Error("LỖI HẠN MỨC (QUOTA): API Key của bạn đã hết lượt sử dụng miễn phí hoặc chưa được cấu hình thanh toán.");
+      }
+
+      if (isHighDemand) {
+        throw new Error("Hệ thống AI hiện đang quá tải do lượt truy cập cao. Vui lòng đợi khoảng 30 giây rồi nhấn thử lại.");
+      }
+
+      // If it's a timeout error or other fatal error, and we maxed out attempts
+      if (attempts >= maxAttempts || errorMessage.includes("60 giây")) {
+         throw error;
+      }
+    }
   }
 
-  if (!data.result) {
-    throw new Error('No image returned from server.');
-  }
-
-  return data.result;
+  throw new Error("Gặp sự cố khi xử lý ảnh sau nhiều lần thử lại.");
 };
