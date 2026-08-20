@@ -15,6 +15,8 @@ export enum AppState {
 export interface PhotoRecipe {
   images: { data: string; mimeType: string }[];
   presetId: string;
+  aspectRatio?: string;
+  outputQuality?: string;
 }
 
 export interface PhotoPreset {

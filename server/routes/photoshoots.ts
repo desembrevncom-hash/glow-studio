@@ -38,7 +38,7 @@ const generateHandler = async (req: any, res: any) => {
   isGenerating = true;
 
   try {
-    const { images, presetId } = req.body;
+    const { images, presetId, aspectRatio: inputAspectRatio, outputQuality: inputQuality } = req.body;
 
     if (!images || !Array.isArray(images) || images.length === 0) {
       return res.status(400).json({ error: "Vui lòng tải lên ít nhất 1 hình ảnh sản phẩm.", code: "INVALID_IMAGE" });
@@ -90,9 +90,14 @@ const generateHandler = async (req: any, res: any) => {
     let attempt = 0;
     const maxRetries = 2; // Total 3 attempts (1 initial + 2 retries)
 
-    // Determine aspect ratio from preset
-    const isPortrait = finalPresetId === 'social_ad_4_5';
-    const aspectRatio = isPortrait ? "3:4" : "1:1";
+    // Map frontend aspect ratio to Gemini supported ratio
+    let geminiAspectRatio = "4:3"; // Default for unknown
+    if (inputAspectRatio === "1:1") geminiAspectRatio = "1:1";
+    if (inputAspectRatio === "4:5") geminiAspectRatio = "3:4"; // Closest supported portrait
+    if (inputAspectRatio === "9:16") geminiAspectRatio = "9:16";
+    if (inputAspectRatio === "16:9") geminiAspectRatio = "16:9";
+
+    const is2K = inputQuality === "2k";
 
     while (attempt <= maxRetries) {
       try {
@@ -103,8 +108,11 @@ const generateHandler = async (req: any, res: any) => {
           setTimeout(() => reject(new Error("TIMEOUT_ERROR")), 90000);
         });
 
-        // Config fallback depending on the exact model
-        const config = model.includes('lite') ? { imageConfig: { aspectRatio } } : { imageConfig: { aspectRatio, imageSize: "2K" } };
+        const imageConfig: any = { aspectRatio: geminiAspectRatio };
+        if (!model.includes('lite') && is2K) {
+          imageConfig.imageSize = "2K";
+        }
+        const config = { imageConfig };
 
         const responsePromise = ai.models.generateContent({
           model,

@@ -1,13 +1,14 @@
+import { PhotoRecipe } from '../types';
+
 export const generateProductPhotoshoot = async (
-  images: { data: string; mimeType: string }[],
-  presetId?: string
+  recipe: PhotoRecipe
 ): Promise<string> => {
   const response = await fetch('/api/photoshoots', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ images, presetId })
+    body: JSON.stringify(recipe)
   });
 
   const data = await response.json();
@@ -32,13 +33,13 @@ export const generateProductPhotoshoot = async (
         errorMsg = 'Một yêu cầu tạo ảnh đang được xử lý. Vui lòng chờ hoàn tất.';
         break;
       case 'INVALID_IMAGE':
-        errorMsg = data.error || 'Ảnh không hợp lệ hoặc quá lớn.';
+        errorMsg = 'Ảnh không hợp lệ. Vui lòng dùng PNG, JPG, JPEG hoặc WebP dưới 10MB.';
         break;
       case 'GEMINI_EMPTY_RESULT':
-        errorMsg = 'AI không trả về kết quả ảnh. Vui lòng thử lại.';
+        errorMsg = 'Gemini không trả về ảnh. Vui lòng thử lại.';
         break;
       case 'UNKNOWN_ERROR':
-        errorMsg = 'Đã xảy ra lỗi không xác định từ AI. Vui lòng thử lại.';
+        errorMsg = 'Đã có lỗi xảy ra. Vui lòng thử lại.';
         break;
     }
 

@@ -31,6 +31,8 @@ const App: React.FC = () => {
 
   const [cooldown, setCooldown] = useState<number>(0);
   const [selectedPreset, setSelectedPreset] = useState<string>('premium_black_glow');
+  const [aspectRatio, setAspectRatio] = useState<string>('4:5');
+  const [outputQuality, setOutputQuality] = useState<string>('2k');
 
   useEffect(() => {
     let timer: any;
@@ -50,7 +52,12 @@ const App: React.FC = () => {
     setError(null);
 
     try {
-      const resultUrl = await generateProductPhotoshoot(imagesToProcess, selectedPreset);
+      const resultUrl = await generateProductPhotoshoot({
+        images: imagesToProcess,
+        presetId: selectedPreset,
+        aspectRatio,
+        outputQuality
+      });
       setProcessedImage(resultUrl);
       setAppState(AppState.COMPLETED);
     } catch (err: any) {
@@ -77,9 +84,11 @@ const App: React.FC = () => {
     setCooldown(0);
   };
 
-  const hasImages = mainProductImage !== null || packagingImage !== null;
+  const hasMainImage = mainProductImage !== null;
   const isGenerating = appState === AppState.PROCESSING;
-  const isButtonDisabled = !hasImages || isGenerating || cooldown > 0;
+  const isButtonDisabled = !hasMainImage || isGenerating || cooldown > 0;
+  
+  const getSelectedPresetName = () => PHOTO_PRESETS.find(p => p.id === selectedPreset)?.label || 'Custom';
 
   return (
     <div id="studio-glow-app" className="min-h-screen flex flex-col items-center py-12 px-4 bg-[#080808] text-white">
@@ -110,6 +119,7 @@ const App: React.FC = () => {
                 onImageSelect={(file) => handleImageSelect(file, 1)}
                 selectedImage={mainProductImage?.data || null}
                 isLoading={appState === AppState.PROCESSING}
+                isRequired={true}
               />
               <ImageUploader
                 id="packaging-box"
@@ -117,22 +127,59 @@ const App: React.FC = () => {
                 onImageSelect={(file) => handleImageSelect(file, 2)}
                 selectedImage={packagingImage?.data || null}
                 isLoading={appState === AppState.PROCESSING}
+                isRequired={false}
               />
             </div>
 
-            <div className="flex flex-col gap-2">
-              <label htmlFor="preset-select" className="text-sm font-bold text-zinc-400 uppercase tracking-widest">Phong cách ảnh (Preset)</label>
-              <select 
-                id="preset-select"
-                value={selectedPreset}
-                onChange={(e) => setSelectedPreset(e.target.value)}
-                disabled={isGenerating}
-                className="w-full p-4 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all appearance-none"
-              >
-                {PHOTO_PRESETS.map(preset => (
-                  <option key={preset.id} value={preset.id}>{preset.label}</option>
-                ))}
-              </select>
+            <div className="bg-zinc-950/50 p-6 rounded-2xl border border-zinc-800/80 space-y-5">
+              <h3 className="text-sm font-bold text-zinc-300 uppercase tracking-widest border-b border-zinc-800 pb-3">Cấu hình Studio (Photo Settings)</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="flex flex-col gap-2 md:col-span-3">
+                  <label htmlFor="preset-select" className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Phong cách ảnh (Preset)</label>
+                  <select 
+                    id="preset-select"
+                    value={selectedPreset}
+                    onChange={(e) => setSelectedPreset(e.target.value)}
+                    disabled={isGenerating}
+                    className="w-full p-3.5 rounded-xl bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:border-indigo-500 transition-colors appearance-none text-sm"
+                  >
+                    {PHOTO_PRESETS.map(preset => (
+                      <option key={preset.id} value={preset.id}>{preset.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-2 md:col-span-1">
+                  <label htmlFor="aspect-ratio-select" className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Tỉ lệ ảnh</label>
+                  <select 
+                    id="aspect-ratio-select"
+                    value={aspectRatio}
+                    onChange={(e) => setAspectRatio(e.target.value)}
+                    disabled={isGenerating}
+                    className="w-full p-3.5 rounded-xl bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:border-indigo-500 transition-colors appearance-none text-sm"
+                  >
+                    <option value="1:1">1:1 (Vuông)</option>
+                    <option value="4:5">4:5 (Dọc FB/Insta)</option>
+                    <option value="9:16">9:16 (Story/TikTok)</option>
+                    <option value="16:9">16:9 (Ngang)</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-2 md:col-span-2">
+                  <label htmlFor="quality-select" className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Chất lượng Render</label>
+                  <select 
+                    id="quality-select"
+                    value={outputQuality}
+                    onChange={(e) => setOutputQuality(e.target.value)}
+                    disabled={isGenerating}
+                    className="w-full p-3.5 rounded-xl bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:border-indigo-500 transition-colors appearance-none text-sm"
+                  >
+                    <option value="2k">Ultra HD (2K) - Chi tiết cao</option>
+                    <option value="standard">Standard - Nhanh chóng</option>
+                  </select>
+                </div>
+              </div>
             </div>
 
             <button
@@ -174,15 +221,20 @@ const App: React.FC = () => {
           </section>
         ) : (
           <section id="result-section" className="w-full max-w-4xl flex flex-col items-center gap-8">
-            <div id="result-card" className="w-full aspect-square max-w-2xl bg-zinc-950 rounded-3xl border border-zinc-800 shadow-2xl overflow-hidden flex items-center justify-center relative group">
+            <div id="result-card" className="w-full max-w-2xl bg-zinc-950 rounded-3xl border border-zinc-800 shadow-2xl overflow-hidden flex flex-col relative group">
               <img
                 id="result-image"
                 src={processedImage}
                 alt="Studio Result"
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                className="w-full h-auto max-h-[80vh] object-contain bg-black"
               />
-              <div className="absolute top-6 left-6 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 text-[10px] font-bold tracking-widest uppercase text-white">
-                2K Studio Composition
+              <div className="absolute top-4 left-4 flex flex-col gap-2">
+                <div className="bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-[10px] font-bold tracking-widest uppercase text-white w-max">
+                  2K Studio Composition
+                </div>
+                <div className="bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-[10px] font-medium tracking-wide text-zinc-300 w-max">
+                  {getSelectedPresetName()} • {aspectRatio}
+                </div>
               </div>
             </div>
 

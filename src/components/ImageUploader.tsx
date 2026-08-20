@@ -6,9 +6,10 @@ interface ImageUploaderProps {
   onImageSelect: (file: File) => void;
   selectedImage: string | null;
   isLoading: boolean;
+  isRequired?: boolean;
 }
 
-const ImageUploader: React.FC<ImageUploaderProps> = ({ id, label, onImageSelect, selectedImage, isLoading }) => {
+const ImageUploader: React.FC<ImageUploaderProps> = ({ id, label, onImageSelect, selectedImage, isLoading, isRequired = false }) => {
   const [isDragging, setIsDragging] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -42,9 +43,14 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ id, label, onImageSelect,
 
   return (
     <div id={`uploader-container-${id}`} className="w-full">
-      <p id={`uploader-label-${id}`} className="text-zinc-400 text-xs uppercase tracking-wider mb-2.5 font-medium">
-        {label}
-      </p>
+      <div className="flex items-center justify-between mb-2.5">
+        <p id={`uploader-label-${id}`} className="text-zinc-400 text-xs uppercase tracking-wider font-medium">
+          {label}
+        </p>
+        <span className={`text-[9px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full ${isRequired ? 'bg-indigo-500/20 text-indigo-300' : 'bg-zinc-800 text-zinc-500'}`}>
+          {isRequired ? 'Bắt buộc' : 'Tuỳ chọn'}
+        </span>
+      </div>
       <div
         id={`dropzone-${id}`}
         onDragOver={handleDragOver}
