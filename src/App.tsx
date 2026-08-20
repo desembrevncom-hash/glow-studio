@@ -1,3 +1,7 @@
+/**
+ * Studio Glow - AI Product Photographer
+ * Version 1.1.0 - Production Render History & Re-render Enabled
+ */
 import React, { useState, useCallback, useEffect } from 'react';
 import {
   generateProductPhotoshoot,
