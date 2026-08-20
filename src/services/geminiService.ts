@@ -1,8 +1,8 @@
-import { PhotoRecipe } from '../types';
+import { PhotoRecipe, PhotoshootResponse } from '../types';
 
 export const generateProductPhotoshoot = async (
   recipe: PhotoRecipe
-): Promise<string> => {
+): Promise<PhotoshootResponse> => {
   const response = await fetch('/api/photoshoots', {
     method: 'POST',
     headers: {
@@ -64,5 +64,8 @@ export const generateProductPhotoshoot = async (
     throw new Error('No image returned from server.');
   }
 
-  return data.imageUrl;
+  return {
+    imageUrl: data.imageUrl,
+    metadata: data.metadata
+  };
 };

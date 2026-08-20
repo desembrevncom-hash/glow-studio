@@ -36,6 +36,7 @@ const generateHandler = async (req: any, res: any) => {
   }
 
   isGenerating = true;
+  const startTime = Date.now();
 
   try {
     const { images, presetId, aspectRatio: inputAspectRatio, outputQuality: inputQuality } = req.body;
@@ -67,7 +68,7 @@ const generateHandler = async (req: any, res: any) => {
     
     // Get actual prompt based on PhotoRecipe
     const hasPackaging = images.length > 1;
-    const finalPresetId = presetId || 'premium_black_glow';
+    const finalPresetId = presetId || 'premium_bright_studio';
     const promptText = buildPrompt(finalPresetId, hasPackaging);
 
     // Apply Gemini Model logic
@@ -91,7 +92,7 @@ const generateHandler = async (req: any, res: any) => {
     const maxRetries = 2; // Total 3 attempts (1 initial + 2 retries)
 
     // Map frontend aspect ratio to Gemini supported ratio
-    let geminiAspectRatio = "4:3"; // Default for unknown
+    let geminiAspectRatio = "1:1"; // Default for 1:1
     if (inputAspectRatio === "1:1") geminiAspectRatio = "1:1";
     if (inputAspectRatio === "4:5") geminiAspectRatio = "3:4"; // Closest supported portrait
     if (inputAspectRatio === "9:16") geminiAspectRatio = "9:16";
@@ -193,7 +194,17 @@ const generateHandler = async (req: any, res: any) => {
       return res.status(500).json({ error: "Không nhận được dữ liệu hình ảnh trả về từ AI.", code: "GEMINI_EMPTY_RESULT" });
     }
 
-    return res.json({ imageUrl: resultImageUrl });
+    const durationMs = Date.now() - startTime;
+    return res.json({
+      imageUrl: resultImageUrl,
+      metadata: {
+        presetId: finalPresetId,
+        aspectRatio: inputAspectRatio || "1:1",
+        outputQuality: inputQuality || "2k",
+        model,
+        durationMs
+      }
+    });
   } catch (error: any) {
     logGeminiError(error);
     return res.status(500).json({

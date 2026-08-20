@@ -31,8 +31,9 @@ const App: React.FC = () => {
 
   const [cooldown, setCooldown] = useState<number>(0);
   const [selectedPreset, setSelectedPreset] = useState<string>('premium_bright_studio');
-  const [aspectRatio, setAspectRatio] = useState<string>('4:5');
+  const [aspectRatio, setAspectRatio] = useState<string>('1:1');
   const [outputQuality, setOutputQuality] = useState<string>('2k');
+  const [resultMetadata, setResultMetadata] = useState<any>(null);
 
   useEffect(() => {
     let timer: any;
@@ -52,13 +53,14 @@ const App: React.FC = () => {
     setError(null);
 
     try {
-      const resultUrl = await generateProductPhotoshoot({
+      const result = await generateProductPhotoshoot({
         images: imagesToProcess,
         presetId: selectedPreset,
         aspectRatio,
         outputQuality
       });
-      setProcessedImage(resultUrl);
+      setProcessedImage(result.imageUrl);
+      setResultMetadata(result.metadata || null);
       setAppState(AppState.COMPLETED);
     } catch (err: any) {
       const msg = err.message || "Đã xảy ra lỗi trong quá trình tạo ảnh. Vui lòng thử lại.";
@@ -68,10 +70,6 @@ const App: React.FC = () => {
       if (err.retryAfterSeconds) {
         setCooldown(err.retryAfterSeconds);
       }
-    } finally {
-      if (appState === AppState.PROCESSING) {
-        setAppState(AppState.IDLE);
-      }
     }
   };
 
@@ -80,6 +78,7 @@ const App: React.FC = () => {
     setMainProductImage(null);
     setPackagingImage(null);
     setProcessedImage(null);
+    setResultMetadata(null);
     setError(null);
     setCooldown(0);
   };
@@ -88,7 +87,7 @@ const App: React.FC = () => {
   const isGenerating = appState === AppState.PROCESSING;
   const isButtonDisabled = !hasMainImage || isGenerating || cooldown > 0;
   
-  const getSelectedPresetName = () => PHOTO_PRESETS.find(p => p.id === selectedPreset)?.label || 'Custom';
+  const getPresetLabel = (id?: string) => PHOTO_PRESETS.find(p => p.id === (id || selectedPreset))?.label || 'Custom';
 
   return (
     <div id="studio-glow-app" className="min-h-screen flex flex-col items-center py-12 px-4 bg-[#080808] text-white">
@@ -241,10 +240,11 @@ const App: React.FC = () => {
               />
               <div className="absolute top-4 left-4 flex flex-col gap-2">
                 <div className="bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-[10px] font-bold tracking-widest uppercase text-white w-max">
-                  2K Studio Composition
+                  {resultMetadata?.outputQuality === '2k' || outputQuality === '2k' ? '2K Studio Composition' : 'Standard Composition'}
                 </div>
                 <div className="bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-[10px] font-medium tracking-wide text-zinc-300 w-max">
-                  {getSelectedPresetName()} • {aspectRatio}
+                  {getPresetLabel(resultMetadata?.presetId)} • {resultMetadata?.aspectRatio || aspectRatio}
+                  {resultMetadata?.durationMs ? ` • ${(resultMetadata.durationMs / 1000).toFixed(1)}s` : ''}
                 </div>
               </div>
             </div>

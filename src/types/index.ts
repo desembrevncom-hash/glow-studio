@@ -29,3 +29,17 @@ export interface PhotoPreset {
   negativePrompt: string;
   aspectRatio: string;
 }
+
+export interface PhotoshootMetadata {
+  presetId?: string;
+  aspectRatio?: string;
+  outputQuality?: string;
+  model?: string;
+  durationMs?: number;
+}
+
+export interface PhotoshootResponse {
+  imageUrl: string;
+  metadata?: PhotoshootMetadata;
+}
+
