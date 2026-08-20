@@ -153,10 +153,21 @@ const generateHandler = async (req: any, res: any) => {
 
         logGeminiError(err);
         
-        const status = err?.status;
-        const isInvalidKey = status === 401 || status === 403 || errMsg.includes("API key not valid") || errMsg.includes("Permission denied");
-        const isRateLimit = status === 429 || errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("RESOURCE_EXHAUSTED") || errMsg.includes("limit: 0");
-        const isServerError = status >= 500 || errMsg.includes("500") || errMsg.includes("503") || errMsg.includes("INTERNAL") || errMsg.includes("overloaded");
+        const status = err?.status || err?.code;
+        const isSpendCapExceeded = errMsg.toLowerCase().includes("spending cap") || errMsg.toLowerCase().includes("spend cap");
+        const isInvalidKey = status === 401 || status === 403 || errMsg.includes("API key not valid") || errMsg.includes("Permission denied") || errMsg.includes("API_KEY_INVALID");
+        const isRateLimit = !isSpendCapExceeded && (status === 429 || errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("RESOURCE_EXHAUSTED") || errMsg.includes("limit: 0"));
+        const isServerError = (typeof status === "number" && status >= 500) ||
+          status === "UNAVAILABLE" || status === "503" ||
+          errMsg.includes("500") || errMsg.includes("503") || errMsg.includes("INTERNAL") || errMsg.includes("UNAVAILABLE") || errMsg.includes("overloaded") || errMsg.includes("unavailable");
+
+        if (isSpendCapExceeded) {
+          return res.status(429).json({
+            error: "Dự án của bạn đã đạt hạn mức chi tiêu hàng tháng (Monthly Spend Cap). Vui lòng điều chỉnh hạn mức tại https://ai.studio/spend để tiếp tục.",
+            code: "SPEND_CAP_EXCEEDED",
+            spendUrl: "https://ai.studio/spend"
+          });
+        }
 
         if (isInvalidKey) {
           return res.status(401).json({ error: "API key không hợp lệ hoặc chưa được cấp quyền.", code: "INVALID_API_KEY" });

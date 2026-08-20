@@ -14,8 +14,8 @@ COPY . .
 # Build the frontend
 RUN npm run build
 
-# Expose port (Cloud Run uses PORT environment variable, defaults to 8080)
-EXPOSE 8080
+# Expose port (Cloud Run sets PORT env variable, fallback is 3000)
+EXPOSE 3000
 
 # Start the express server
 CMD ["npm", "start"]

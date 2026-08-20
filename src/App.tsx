@@ -209,6 +209,17 @@ const App: React.FC = () => {
                 <p className="text-red-300 text-sm text-center font-medium leading-relaxed">
                   {error}
                 </p>
+                {error.includes("ai.studio/spend") || error.includes("chi tiêu") || error.includes("Spend Cap") ? (
+                  <a
+                    id="spend-cap-link"
+                    href="https://ai.studio/spend"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="py-2 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all self-center text-center inline-block"
+                  >
+                    Mở trang quản lý Spend Cap (ai.studio/spend) ↗
+                  </a>
+                ) : null}
                 <button
                   id="retry-button"
                   onClick={handleGeneratePhotoshoot}
