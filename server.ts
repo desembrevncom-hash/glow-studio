@@ -38,19 +38,67 @@ function getGeminiClient(): GoogleGenAI {
   });
 }
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+let isGenerating = false;
+
+// Safe error logging
+function logGeminiError(error: any) {
+  const safeError = {
+    name: error?.name,
+    message: error?.message,
+    status: error?.status,
+    requestId: error?.response?.headers?.get?.('x-request-id') || 'unknown'
+  };
+  console.error("Gemini API Error:", JSON.stringify(safeError));
+}
+
 // API Routes
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok" });
+  res.json({
+    ok: true,
+    hasGeminiKey: !!(process.env.GEMINI_API_KEY || process.env.API_KEY),
+    timestamp: new Date().toISOString()
+  });
 });
 
 app.post("/api/generate-photoshoot", async (req, res) => {
+  if (isGenerating) {
+    return res.status(429).json({
+      error: "Một yêu cầu tạo ảnh đang được xử lý. Vui lòng chờ hoàn tất.",
+      code: "REQUEST_IN_PROGRESS"
+    });
+  }
+
+  isGenerating = true;
+
   try {
     const { images, customPrompt } = req.body;
 
     if (!images || !Array.isArray(images) || images.length === 0) {
-      return res.status(400).json({ error: "Vui lòng tải lên ít nhất 1 hình ảnh sản phẩm." });
+      return res.status(400).json({ error: "Vui lòng tải lên ít nhất 1 hình ảnh sản phẩm.", code: "BAD_REQUEST" });
     }
 
+    // Validate images
+    for (const img of images) {
+      const mime = img.mimeType || "image/png";
+      if (!ALLOWED_TYPES.includes(mime)) {
+        return res.status(400).json({ error: `Định dạng ảnh không hợp lệ (${mime}). Hỗ trợ: PNG, JPG, JPEG, WebP.`, code: "BAD_REQUEST" });
+      }
+      
+      // Calculate approximate base64 size (4 bytes per 3 bytes of data)
+      const base64Length = img.data.split(',').pop()?.length || 0;
+      const sizeBytes = (base64Length * 3) / 4;
+      if (sizeBytes > MAX_FILE_SIZE) {
+        return res.status(400).json({ error: "Kích thước ảnh vượt quá 10MB.", code: "BAD_REQUEST" });
+      }
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: "Server chưa cấu hình GEMINI_API_KEY.", code: "MISSING_API_KEY" });
+    }
+    
     const ai = getGeminiClient();
     const promptText = customPrompt || genericCosmeticsPrompt;
 
@@ -67,64 +115,43 @@ app.post("/api/generate-photoshoot", async (req, res) => {
       };
     });
 
-    // Candidate model configurations for maximum reliability and quality
     const candidateConfigurations = [
       {
         model: "gemini-3.1-flash-image",
         config: {
-          imageConfig: {
-            aspectRatio: "1:1",
-            imageSize: "1K",
-          },
+          imageConfig: { aspectRatio: "1:1", imageSize: "2K" },
         },
-      },
-      {
-        model: "gemini-3.1-flash-image",
-        config: {
-          imageConfig: {
-            aspectRatio: "1:1",
-            imageSize: "2K",
-          },
-        },
-      },
-      {
-        model: "gemini-3.1-flash-lite-image",
-        config: {
-          imageConfig: {
-            aspectRatio: "1:1",
-          },
-        },
-      },
-      {
-        model: "gemini-3.1-flash-lite-image",
-        config: undefined,
-      },
+      }
     ];
 
-    let lastError: any = null;
     let resultImageUrl: string | null = null;
+    let attempt = 0;
+    const maxRetries = 2; // Total 3 attempts (1 initial + 2 retries)
 
     for (const { model, config } of candidateConfigurations) {
-      // Try up to 2 attempts per candidate configuration for transient 500s
-      for (let attempt = 0; attempt < 2; attempt++) {
+      while (attempt <= maxRetries) {
         try {
-          if (attempt > 0) {
-            await new Promise((r) => setTimeout(r, 1500));
-          }
+          if (attempt === 1) await new Promise(r => setTimeout(r, 2000));
+          if (attempt === 2) await new Promise(r => setTimeout(r, 5000));
 
-          const response = await ai.models.generateContent({
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error("TIMEOUT_ERROR")), 90000);
+          });
+
+          const responsePromise = ai.models.generateContent({
             model,
-            contents: {
-              parts: [...parts, { text: promptText }],
-            },
+            contents: { parts: [...parts, { text: promptText }] },
             config,
           });
+
+          const response = await Promise.race([responsePromise, timeoutPromise]) as any;
 
           if (response.candidates && response.candidates.length > 0) {
             const candidate = response.candidates[0];
             if (candidate.finishReason === "SAFETY") {
               return res.status(400).json({
                 error: "AI từ chối xử lý hình ảnh này vì lý do an toàn nội dung (Safety). Vui lòng thử hình ảnh khác.",
+                code: "BAD_REQUEST"
               });
             }
 
@@ -139,64 +166,64 @@ app.post("/api/generate-photoshoot", async (req, res) => {
             }
           }
 
-          if (resultImageUrl) {
-            break;
-          }
+          if (resultImageUrl) break;
+          throw new Error("EMPTY_RESPONSE");
         } catch (err: any) {
-          lastError = err;
-          console.warn(`Attempt ${attempt + 1} with ${model} failed:`, err?.message || err);
-          const msg = String(err?.message || err);
-          // If not a transient 500 error, don't repeat the exact same candidate
-          if (!msg.includes("500") && !msg.includes("INTERNAL") && !msg.includes("Internal error")) {
-            break;
+          const errMsg = err?.message || String(err);
+          
+          if (errMsg === "TIMEOUT_ERROR") {
+            return res.status(504).json({ error: "Yêu cầu tạo ảnh mất quá nhiều thời gian. Vui lòng thử lại với ảnh nhẹ hơn.", code: "TIMEOUT" });
           }
+
+          logGeminiError(err);
+          
+          const status = err?.status;
+          const isInvalidKey = status === 401 || status === 403 || errMsg.includes("API key not valid") || errMsg.includes("Permission denied");
+          const isRateLimit = status === 429 || errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("RESOURCE_EXHAUSTED");
+          const isServerError = status >= 500 || errMsg.includes("500") || errMsg.includes("503") || errMsg.includes("INTERNAL") || errMsg.includes("overloaded");
+
+          if (isInvalidKey) {
+            return res.status(401).json({ error: "API key không hợp lệ hoặc chưa được cấp quyền.", code: "INVALID_API_KEY" });
+          }
+
+          if (isRateLimit || isServerError) {
+            if (attempt < maxRetries) {
+              attempt++;
+              continue;
+            }
+            if (isRateLimit) {
+              return res.status(429).json({ error: "Hệ thống AI đang bận. Vui lòng đợi 30 giây rồi thử lại.", code: "RATE_LIMIT", retryAfterSeconds: 30 });
+            }
+            return res.status(503).json({ error: "Hệ thống AI gặp lỗi hoặc quá tải. Vui lòng thử lại.", code: "SERVER_ERROR" });
+          }
+
+          // Other errors (e.g., 400 Bad Request) don't retry
+          return res.status(400).json({ error: errMsg || "Yêu cầu không hợp lệ.", code: "BAD_REQUEST" });
         }
       }
-
-      if (resultImageUrl) {
-        break;
-      }
+      if (resultImageUrl) break;
     }
 
     if (!resultImageUrl) {
-      if (lastError) {
-        const errMsg = lastError.message || String(lastError);
-        if (errMsg.includes("limit: 0") || (errMsg.includes("free_tier") && errMsg.includes("429"))) {
-          return res.status(429).json({
-            error: "Mô hình tạo ảnh (Flash Image) yêu cầu API Key có kích hoạt thanh toán (Pay-As-You-Go) trên Google AI Studio. Gói miễn phí có hạn mức 0 cho tính năng tạo ảnh.",
-            isBillingQuotaIssue: true,
-          });
-        }
-        if (errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("RESOURCE_EXHAUSTED")) {
-          return res.status(429).json({
-            error: "Hệ thống AI đang quá tải hoặc tạm thời vượt hạn mức (Rate limit). Vui lòng thử lại sau vài giây.",
-            isRateLimit: true,
-          });
-        }
-        if (errMsg.includes("500") || errMsg.includes("INTERNAL") || errMsg.includes("Internal error")) {
-          return res.status(500).json({
-            error: "Dịch vụ AI gặp lỗi tạm thời khi xử lý ảnh độ phân giải cao. Vui lòng bấm 'Thử lại' để thực hiện lại lượt tạo.",
-          });
-        }
-        return res.status(500).json({
-          error: errMsg || "Không thể tạo ảnh từ AI. Vui lòng thử lại.",
-        });
-      }
-      return res.status(500).json({
-        error: "Không nhận được dữ liệu hình ảnh trả về từ AI.",
-      });
+      return res.status(500).json({ error: "Không nhận được dữ liệu hình ảnh trả về từ AI.", code: "SERVER_ERROR" });
     }
 
     return res.json({ imageUrl: resultImageUrl });
   } catch (error: any) {
-    console.error("Photoshoot generation error:", error);
+    logGeminiError(error);
     return res.status(500).json({
       error: error?.message || "Đã xảy ra lỗi không xác định trong quá trình xử lý.",
+      code: "SERVER_ERROR"
     });
+  } finally {
+    isGenerating = false;
   }
 });
 
 async function startServer() {
+  const portStr = process.env.PORT || "8080";
+  const port = parseInt(portStr, 10);
+  
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -211,8 +238,8 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Studio Glow server running on http://localhost:${PORT}`);
+  app.listen(port, "0.0.0.0", () => {
+    console.log(`Studio Glow server running on http://0.0.0.0:${port}`);
   });
 }
 

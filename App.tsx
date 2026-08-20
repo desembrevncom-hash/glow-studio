@@ -28,11 +28,20 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const handleGeneratePhotoshoot = async () => {
-    const imagesToProcess = [mainProductImage, packagingImage].filter(
-      (img): img is { data: string; mimeType: string } => img !== null
-    );
+  const [cooldown, setCooldown] = useState<number>(0);
 
+  useEffect(() => {
+    let timer: any;
+    if (cooldown > 0) {
+      timer = setInterval(() => setCooldown((c) => c - 1), 1000);
+    }
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
+  const handleGeneratePhotoshoot = async () => {
+    if (cooldown > 0) return;
+
+    const imagesToProcess = [mainProductImage, packagingImage].filter((img): img is { data: string, mimeType: string } => img !== null);
     if (imagesToProcess.length === 0) return;
 
     setAppState(AppState.PROCESSING);
@@ -43,8 +52,17 @@ const App: React.FC = () => {
       setProcessedImage(resultUrl);
       setAppState(AppState.COMPLETED);
     } catch (err: any) {
-      setError(err.message || 'Đã xảy ra lỗi trong quá trình tạo ảnh.');
+      const msg = err.message || "Đã xảy ra lỗi trong quá trình tạo ảnh. Vui lòng thử lại.";
+      setError(msg);
       setAppState(AppState.ERROR);
+
+      if (err.retryAfterSeconds) {
+        setCooldown(err.retryAfterSeconds);
+      }
+    } finally {
+      if (appState === AppState.PROCESSING) {
+        setAppState(AppState.IDLE);
+      }
     }
   };
 
@@ -54,9 +72,12 @@ const App: React.FC = () => {
     setPackagingImage(null);
     setProcessedImage(null);
     setError(null);
+    setCooldown(0);
   };
 
   const hasImages = mainProductImage !== null || packagingImage !== null;
+  const isGenerating = appState === AppState.PROCESSING;
+  const isButtonDisabled = !hasImages || isGenerating || cooldown > 0;
 
   return (
     <div id="studio-glow-app" className="min-h-screen flex flex-col items-center py-12 px-4 bg-[#080808] text-white">
@@ -100,18 +121,20 @@ const App: React.FC = () => {
             <button
               id="generate-photoshoot-btn"
               onClick={handleGeneratePhotoshoot}
-              disabled={!hasImages || appState === AppState.PROCESSING}
-              className={`w-full py-5 px-8 rounded-2xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3 ${
-                !hasImages || appState === AppState.PROCESSING
-                  ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed opacity-50'
-                  : 'bg-white text-black hover:bg-zinc-200 shadow-lg active:scale-[0.98]'
+              disabled={isButtonDisabled}
+              className={`w-full py-6 px-8 rounded-[2rem] font-black text-xl transition-all duration-500 flex items-center justify-center gap-4 ${
+                isButtonDisabled
+                  ? 'bg-zinc-800/50 text-zinc-600 cursor-not-allowed opacity-50'
+                  : 'bg-white text-black hover:bg-zinc-100 shadow-[0_0_40px_rgba(255,255,255,0.1)] active:scale-[0.97]'
               }`}
             >
-              {appState === AppState.PROCESSING ? (
+              {isGenerating ? (
                 <>
-                  <div className="animate-spin h-5 w-5 border-2 border-zinc-400 border-t-black rounded-full"></div>
+                  <div className="animate-spin h-6 w-6 border-4 border-black/10 border-t-black rounded-full"></div>
                   <span>Đang dựng ảnh cao cấp 2K...</span>
                 </>
+              ) : cooldown > 0 ? (
+                <span>Thử lại sau {cooldown}s</span>
               ) : (
                 'Generate Product Photoshoot'
               )}
