@@ -24,6 +24,7 @@ export interface PhotoshootJob {
   errorCode?: string;
   errorMessage?: string;
   originalJobId?: string;
+  mode?: 'default' | 'rerender' | 'variation';
   createdAt: string;
   updatedAt: string;
 }

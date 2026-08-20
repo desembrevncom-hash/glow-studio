@@ -97,10 +97,12 @@ export const getPhotoshootHistory = async (sessionId?: string): Promise<Photosho
   return data.jobs || [];
 };
 
-export const rerenderPhotoshoot = async (jobId: string): Promise<PhotoshootResponse> => {
+export const rerenderPhotoshoot = async (jobId: string, sessionId?: string): Promise<PhotoshootResponse> => {
+  const sid = sessionId || getSessionId();
   const response = await fetch(`/api/photoshoots/${jobId}/rerender`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' }
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: sid })
   });
 
   const data = await response.json();
@@ -118,10 +120,12 @@ export const rerenderPhotoshoot = async (jobId: string): Promise<PhotoshootRespo
   };
 };
 
-export const variationPhotoshoot = async (jobId: string): Promise<PhotoshootResponse> => {
+export const variationPhotoshoot = async (jobId: string, sessionId?: string): Promise<PhotoshootResponse> => {
+  const sid = sessionId || getSessionId();
   const response = await fetch(`/api/photoshoots/${jobId}/variation`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' }
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: sid })
   });
 
   const data = await response.json();

@@ -185,7 +185,7 @@ const App: React.FC = () => {
       loadRenderHistory();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
-      setError(err.message || 'Không thể render lại ảnh.');
+      setError(err.message || 'Không thể render lại ảnh. Vui lòng thử lại.');
     } finally {
       setActionInProgressId(null);
     }
@@ -204,7 +204,7 @@ const App: React.FC = () => {
       loadRenderHistory();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
-      setError(err.message || 'Không thể tạo biến thể ảnh.');
+      setError(err.message || 'Không thể tạo biến thể ảnh. Vui lòng thử lại.');
     } finally {
       setActionInProgressId(null);
     }

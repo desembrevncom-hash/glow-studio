@@ -32,6 +32,8 @@ export interface PhotoPreset {
 }
 
 export interface PhotoshootMetadata {
+  mode?: 'default' | 'rerender' | 'variation';
+  originalJobId?: string;
   presetId?: string;
   aspectRatio?: string;
   outputQuality?: string;
@@ -65,6 +67,7 @@ export interface PhotoshootJob {
   errorCode?: string;
   errorMessage?: string;
   originalJobId?: string;
+  mode?: 'default' | 'rerender' | 'variation';
   createdAt: string;
   updatedAt: string;
 }

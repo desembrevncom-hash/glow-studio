@@ -85,6 +85,8 @@ async function processPhotoshootGeneration(params: GenerateParams) {
     });
   }
 
+  const mode = params.isVariation ? 'variation' : (params.originalJobId ? 'rerender' : 'default');
+
   // Create initial job in repository
   const initialJob = await photoshootRepository.createJob({
     sessionId,
@@ -96,7 +98,8 @@ async function processPhotoshootGeneration(params: GenerateParams) {
     mainImageUrl,
     packagingImageUrl,
     promptText,
-    originalJobId: params.originalJobId
+    originalJobId: params.originalJobId,
+    mode
   });
 
   const ai = getGeminiClient();
@@ -278,6 +281,8 @@ async function processPhotoshootGeneration(params: GenerateParams) {
     jobId: completedJob?.id || initialJob.id,
     imageUrl: storedResultUrl,
     metadata: {
+      mode,
+      originalJobId: params.originalJobId,
       presetId: finalPresetId,
       aspectRatio: inputAspectRatio,
       outputQuality: inputQuality,
@@ -373,6 +378,20 @@ router.post("/photoshoots/:id/rerender", async (req: any, res: any) => {
       return res.status(404).json({ error: "Không tìm thấy photoshoot gốc để render lại.", code: "NOT_FOUND" });
     }
 
+    const requestSessionId = req.body?.sessionId || req.query?.sessionId || req.headers['x-session-id'];
+    if (
+      requestSessionId &&
+      originalJob.sessionId &&
+      originalJob.sessionId !== requestSessionId &&
+      originalJob.sessionId !== 'default_anonymous_session'
+    ) {
+      return res.status(403).json({
+        success: false,
+        code: "FORBIDDEN",
+        error: "Bạn không có quyền render lại ảnh này."
+      });
+    }
+
     const images: { data: string; mimeType: string }[] = [
       { data: originalJob.mainImageUrl, mimeType: "image/png" }
     ];
@@ -418,6 +437,20 @@ router.post("/photoshoots/:id/variation", async (req: any, res: any) => {
     const originalJob = await photoshootRepository.getJobById(req.params.id);
     if (!originalJob) {
       return res.status(404).json({ error: "Không tìm thấy photoshoot gốc để tạo biến thể.", code: "NOT_FOUND" });
+    }
+
+    const requestSessionId = req.body?.sessionId || req.query?.sessionId || req.headers['x-session-id'];
+    if (
+      requestSessionId &&
+      originalJob.sessionId &&
+      originalJob.sessionId !== requestSessionId &&
+      originalJob.sessionId !== 'default_anonymous_session'
+    ) {
+      return res.status(403).json({
+        success: false,
+        code: "FORBIDDEN",
+        error: "Bạn không có quyền tạo biến thể từ ảnh này."
+      });
     }
 
     const images: { data: string; mimeType: string }[] = [

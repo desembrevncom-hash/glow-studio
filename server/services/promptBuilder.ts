@@ -57,7 +57,12 @@ CRITICAL PRESET RULES:
   }
 
   const variationInstruction = isVariation
-    ? `\n\nVARIATION DIRECTIVE:\n- Create a new composition variation while preserving product identity, label, logo, shape, and color.`
+    ? `\n\nVARIATION DIRECTIVE:
+- Create a new composition variation of the original product photoshoot.
+- Preserve the exact product identity, brand name, logo, label layout, bottle shape, cap shape, product color, and materials.
+- Change only the composition subtly: camera crop, product placement, shadow direction, reflection intensity, and studio framing.
+- Do not change the product label, do not invent text, do not add extra products, do not distort the packaging.
+- For Premium Clean Studio, keep the background plain white/off-white/light gray and do not add props.`
     : '';
 
   return `${baseInstructions}\n${packagingInstructions}\n${presetInstructions}${variationInstruction}`;
