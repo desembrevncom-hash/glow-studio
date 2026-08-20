@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 
 interface ImageUploaderProps {
   id: string;
@@ -10,51 +9,90 @@ interface ImageUploaderProps {
 }
 
 const ImageUploader: React.FC<ImageUploaderProps> = ({ id, label, onImageSelect, selectedImage, isLoading }) => {
+  const [isDragging, setIsDragging] = useState(false);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       onImageSelect(e.target.files[0]);
     }
   };
 
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (!isLoading) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (!isLoading && e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      if (file.type.startsWith('image/')) {
+        onImageSelect(file);
+      }
+    }
+  };
+
   return (
-    <div className="w-full">
-      <p className="text-zinc-500 text-xs uppercase tracking-widest mb-3 font-semibold">{label}</p>
-      <div 
-        className={`relative border-2 border-dashed rounded-3xl p-4 transition-all duration-300 ${
-          selectedImage ? 'border-zinc-500 bg-white/5' : 'border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900/50'
-        } flex flex-col items-center justify-center min-h-[220px] cursor-pointer group overflow-hidden`}
+    <div id={`uploader-container-${id}`} className="w-full">
+      <p id={`uploader-label-${id}`} className="text-zinc-400 text-xs uppercase tracking-wider mb-2.5 font-medium">
+        {label}
+      </p>
+      <div
+        id={`dropzone-${id}`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`relative border-2 border-dashed rounded-2xl p-4 transition-all duration-200 ${
+          isDragging
+            ? 'border-indigo-500 bg-indigo-500/10'
+            : selectedImage
+            ? 'border-zinc-700 bg-zinc-900/60'
+            : 'border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900/40'
+        } flex flex-col items-center justify-center min-h-[200px] cursor-pointer group overflow-hidden`}
         onClick={() => !isLoading && document.getElementById(`fileInput-${id}`)?.click()}
       >
-        <input 
+        <input
           id={`fileInput-${id}`}
-          type="file" 
-          accept="image/png, image/jpeg" 
-          className="hidden" 
+          type="file"
+          accept="image/png, image/jpeg, image/webp"
+          className="hidden"
           onChange={handleFileChange}
           disabled={isLoading}
         />
-        
+
         {selectedImage ? (
-          <div className="relative w-full h-full flex items-center justify-center">
-            <img 
-              src={selectedImage} 
-              alt="Preview" 
-              className="max-h-40 object-contain rounded-xl"
+          <div id={`preview-wrapper-${id}`} className="relative w-full h-full flex items-center justify-center">
+            <img
+              id={`preview-img-${id}`}
+              src={selectedImage}
+              alt="Preview"
+              className="max-h-40 object-contain rounded-lg"
             />
             {!isLoading && (
-              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl backdrop-blur-sm">
-                <span className="text-white text-xs font-bold uppercase tracking-widest">Change</span>
+              <div
+                id={`hover-overlay-${id}`}
+                className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg backdrop-blur-sm"
+              >
+                <span className="text-white text-xs font-semibold uppercase tracking-wider">Thay đổi ảnh</span>
               </div>
             )}
           </div>
         ) : (
-          <div className="text-center p-4">
-            <div className="w-12 h-12 bg-zinc-900 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform border border-zinc-800">
-              <svg className="w-5 h-5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div id={`empty-state-${id}`} className="text-center p-4">
+            <div className="w-10 h-10 bg-zinc-800 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:scale-105 transition-transform border border-zinc-700">
+              <svg className="w-5 h-5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
             </div>
-            <p className="text-zinc-500 text-xs font-medium">Add PNG</p>
+            <p className="text-zinc-300 text-xs font-medium">Chọn hoặc kéo thả ảnh (PNG, JPG, WebP)</p>
           </div>
         )}
       </div>

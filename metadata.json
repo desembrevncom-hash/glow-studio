@@ -1,7 +1,10 @@
 {
   "name": "Remix Studio Glow - AI Product Photographer",
-  "description": "Transform simple product images into professional studio-quality photographs with realistic lighting and shadows using Gemini 2.5 Flash Image.",
+  "description": "Transform simple product images into professional studio-quality photographs with realistic lighting and shadows using Gemini Flash Image.",
   "requestFramePermissions": [
     "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]
 }
