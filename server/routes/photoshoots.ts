@@ -379,8 +379,15 @@ router.post("/photoshoots/:id/rerender", async (req: any, res: any) => {
     }
 
     const requestSessionId = req.body?.sessionId || req.query?.sessionId || req.headers['x-session-id'];
+    if (!requestSessionId) {
+      return res.status(400).json({
+        success: false,
+        code: "MISSING_SESSION_ID",
+        error: "Thiếu sessionId."
+      });
+    }
+
     if (
-      requestSessionId &&
       originalJob.sessionId &&
       originalJob.sessionId !== requestSessionId &&
       originalJob.sessionId !== 'default_anonymous_session'
@@ -405,7 +412,7 @@ router.post("/photoshoots/:id/rerender", async (req: any, res: any) => {
       presetId: originalJob.presetId,
       aspectRatio: originalJob.aspectRatio,
       outputQuality: originalJob.outputQuality,
-      sessionId: originalJob.sessionId,
+      sessionId: requestSessionId || originalJob.sessionId,
       isVariation: false,
       originalJobId: originalJob.id
     });
@@ -440,8 +447,15 @@ router.post("/photoshoots/:id/variation", async (req: any, res: any) => {
     }
 
     const requestSessionId = req.body?.sessionId || req.query?.sessionId || req.headers['x-session-id'];
+    if (!requestSessionId) {
+      return res.status(400).json({
+        success: false,
+        code: "MISSING_SESSION_ID",
+        error: "Thiếu sessionId."
+      });
+    }
+
     if (
-      requestSessionId &&
       originalJob.sessionId &&
       originalJob.sessionId !== requestSessionId &&
       originalJob.sessionId !== 'default_anonymous_session'

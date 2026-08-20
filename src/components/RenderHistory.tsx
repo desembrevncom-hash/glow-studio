@@ -125,9 +125,14 @@ export const RenderHistory: React.FC<RenderHistoryProps> = ({
                     <span className="bg-black/80 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-semibold text-zinc-400 border border-white/10">
                       {job.aspectRatio}
                     </span>
-                    {(job.mode === 'variation' || Boolean(job.originalJobId)) && (
-                      <span className="bg-indigo-900/80 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-bold text-indigo-200 border border-indigo-500/30">
+                    {(job.mode === 'variation' || (Boolean(job.originalJobId) && job.mode !== 'rerender')) && (
+                      <span className="bg-purple-900/80 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-bold text-purple-200 border border-purple-500/40">
                         Biến thể
+                      </span>
+                    )}
+                    {job.mode === 'rerender' && (
+                      <span className="bg-blue-900/80 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-bold text-blue-200 border border-blue-500/40">
+                        Re-render
                       </span>
                     )}
                   </div>
@@ -180,7 +185,7 @@ export const RenderHistory: React.FC<RenderHistoryProps> = ({
                         title="Render lại với thông số gốc"
                         className="p-2 rounded-xl bg-zinc-800/70 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold flex items-center justify-center transition-colors disabled:opacity-50"
                       >
-                        {isProcessing ? 'Đang chạy...' : 'Re-render'}
+                        {isProcessing ? 'Đang tạo...' : 'Re-render'}
                       </button>
 
                       <button
