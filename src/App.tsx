@@ -550,45 +550,68 @@ const App: React.FC = () => {
 
                 {/* Secondary Reference Role & Composition Controls */}
                 {packagingImage && (
-                  <>
-                    <div className="flex flex-col gap-2 md:col-span-1">
-                      <label htmlFor="secondary-role-select" className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-                        Vai trò ảnh phụ
-                      </label>
-                      <select
-                        id="secondary-role-select"
-                        value={secondaryRole}
-                        onChange={(e) => handleRoleChange(e.target.value as SecondaryReferenceRole)}
-                        disabled={isGenerating}
-                        className="w-full p-3.5 rounded-xl bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:border-indigo-500 transition-colors appearance-none text-sm"
-                      >
-                        <option value="packaging">Vỏ hộp / Bao bì</option>
-                        <option value="smaller_size">Sản phẩm size nhỏ</option>
-                        <option value="larger_size">Sản phẩm size lớn</option>
-                        <option value="companion_product">Sản phẩm cùng dòng / Combo</option>
-                        <option value="background_packaging">Bao bì nền phía sau</option>
-                      </select>
+                  <div className="md:col-span-3 pt-3 border-t border-zinc-800/80 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div className="flex flex-col gap-1.5">
+                        <label htmlFor="secondary-role-select" className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+                          Ảnh phụ là gì?
+                        </label>
+                        <p className="text-[11px] text-zinc-500 leading-tight">
+                          Chọn đúng loại ảnh ở ô thứ 2 để AI hiểu đó là vỏ hộp, size nhỏ, size lớn hay sản phẩm combo.
+                        </p>
+                        <select
+                          id="secondary-role-select"
+                          value={secondaryRole}
+                          onChange={(e) => handleRoleChange(e.target.value as SecondaryReferenceRole)}
+                          disabled={isGenerating}
+                          className="w-full p-3.5 rounded-xl bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:border-indigo-500 transition-colors appearance-none text-sm mt-1"
+                        >
+                          <option value="packaging">Ảnh phụ là vỏ hộp / bao bì</option>
+                          <option value="smaller_size">Ảnh phụ là bản size nhỏ</option>
+                          <option value="larger_size">Ảnh phụ là bản size lớn</option>
+                          <option value="companion_product">Ảnh phụ là sản phẩm khác trong combo</option>
+                          <option value="background_packaging">Ảnh phụ là hộp dùng làm nền phía sau</option>
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        <label htmlFor="composition-mode-select" className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
+                          Muốn sắp xếp ảnh như thế nào?
+                        </label>
+                        <p className="text-[11px] text-zinc-500 leading-tight">
+                          Chọn cách AI đặt sản phẩm chính và ảnh phụ trong ảnh cuối.
+                        </p>
+                        <select
+                          id="composition-mode-select"
+                          value={compositionMode}
+                          onChange={(e) => setCompositionMode(e.target.value as CompositionMode)}
+                          disabled={isGenerating}
+                          className="w-full p-3.5 rounded-xl bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:border-indigo-500 transition-colors appearance-none text-sm mt-1"
+                        >
+                          <option value="product_with_packaging">Sản phẩm chính + hộp bên cạnh</option>
+                          <option value="two_sizes">Hai size đứng cạnh nhau</option>
+                          <option value="product_pair">Combo / cặp sản phẩm</option>
+                          <option value="packaging_background">Hộp làm nền phía sau</option>
+                          <option value="single_product">Chỉ chụp 1 sản phẩm chính</option>
+                        </select>
+                      </div>
                     </div>
 
-                    <div className="flex flex-col gap-2 md:col-span-2">
-                      <label htmlFor="composition-mode-select" className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-                        Bố cục (Composition)
-                      </label>
-                      <select
-                        id="composition-mode-select"
-                        value={compositionMode}
-                        onChange={(e) => setCompositionMode(e.target.value as CompositionMode)}
-                        disabled={isGenerating}
-                        className="w-full p-3.5 rounded-xl bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:border-indigo-500 transition-colors appearance-none text-sm"
-                      >
-                        <option value="product_with_packaging">Sản phẩm + Vỏ hộp</option>
-                        <option value="two_sizes">2 size sản phẩm (Lớn + Nhỏ)</option>
-                        <option value="product_pair">Cặp sản phẩm (Combo)</option>
-                        <option value="packaging_background">Bao bì nền mờ</option>
-                        <option value="single_product">1 sản phẩm đơn</option>
-                      </select>
+                    {/* Dynamic Helper Note */}
+                    <div className="p-3.5 rounded-xl bg-indigo-950/20 border border-indigo-500/30 text-xs text-indigo-300 flex items-start gap-2.5">
+                      <span className="text-base leading-none">💡</span>
+                      <span className="leading-relaxed">
+                        {secondaryRole === 'packaging' &&
+                          'Kết quả mong muốn: sản phẩm chính đứng trước, vỏ hộp ở sau hoặc bên cạnh, không che nhãn.'}
+                        {(secondaryRole === 'smaller_size' || secondaryRole === 'larger_size') &&
+                          'Kết quả mong muốn: chai lớn và chai nhỏ đứng cạnh nhau, nhãn đều quay ra trước.'}
+                        {secondaryRole === 'companion_product' &&
+                          'Kết quả mong muốn: hai sản phẩm cùng bộ được chụp như combo, cân đối và sạch.'}
+                        {secondaryRole === 'background_packaging' &&
+                          'Kết quả mong muốn: sản phẩm chính nổi bật, hộp chỉ làm nền nhẹ phía sau.'}
+                      </span>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             </div>
