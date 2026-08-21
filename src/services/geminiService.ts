@@ -97,12 +97,16 @@ export const getPhotoshootHistory = async (sessionId?: string): Promise<Photosho
   return data.jobs || [];
 };
 
-export const rerenderPhotoshoot = async (jobId: string, sessionId?: string): Promise<PhotoshootResponse> => {
+export const rerenderPhotoshoot = async (
+  jobId: string,
+  sessionId?: string,
+  outputQuality?: string
+): Promise<PhotoshootResponse> => {
   const sid = sessionId || getSessionId();
   const response = await fetch(`/api/photoshoots/${jobId}/rerender`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sessionId: sid })
+    body: JSON.stringify({ sessionId: sid, outputQuality })
   });
 
   const data = await response.json();
@@ -120,9 +124,36 @@ export const rerenderPhotoshoot = async (jobId: string, sessionId?: string): Pro
   };
 };
 
-export const variationPhotoshoot = async (jobId: string, sessionId?: string): Promise<PhotoshootResponse> => {
+export const variationPhotoshoot = async (
+  jobId: string,
+  sessionId?: string,
+  outputQuality?: string
+): Promise<PhotoshootResponse> => {
   const sid = sessionId || getSessionId();
   const response = await fetch(`/api/photoshoots/${jobId}/variation`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: sid, outputQuality })
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    const err = new Error(parseErrorMessage(data)) as any;
+    err.code = data.code;
+    throw err;
+  }
+
+  return {
+    success: true,
+    jobId: data.jobId,
+    imageUrl: data.imageUrl,
+    metadata: data.metadata
+  };
+};
+
+export const upscalePhotoshoot = async (jobId: string, sessionId?: string): Promise<PhotoshootResponse> => {
+  const sid = sessionId || getSessionId();
+  const response = await fetch(`/api/photoshoots/${jobId}/upscale`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ sessionId: sid })

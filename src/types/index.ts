@@ -26,11 +26,13 @@ export type CompositionMode =
   | 'product_pair'
   | 'packaging_background';
 
+export type OutputQuality = 'preview' | 'standard' | '2k';
+
 export interface PhotoRecipe {
   images: { data: string; mimeType: string }[];
   presetId: string;
   aspectRatio?: string;
-  outputQuality?: string;
+  outputQuality?: OutputQuality | string;
   sessionId?: string;
   secondaryRole?: SecondaryReferenceRole;
   compositionMode?: CompositionMode;
@@ -50,11 +52,11 @@ export interface PhotoPreset {
 }
 
 export interface PhotoshootMetadata {
-  mode?: 'default' | 'rerender' | 'variation';
+  mode?: 'default' | 'rerender' | 'variation' | 'upscale';
   originalJobId?: string;
   presetId?: string;
   aspectRatio?: string;
-  outputQuality?: string;
+  outputQuality?: OutputQuality | string;
   model?: string;
   durationMs?: number;
   secondaryRole?: SecondaryReferenceRole;
@@ -78,7 +80,7 @@ export interface PhotoshootJob {
   status: PhotoshootJobStatus;
   presetId: string;
   aspectRatio: string;
-  outputQuality: string;
+  outputQuality: OutputQuality | string;
   model: string;
   mainImageUrl: string;
   packagingImageUrl?: string;
@@ -89,7 +91,7 @@ export interface PhotoshootJob {
   errorCode?: string;
   errorMessage?: string;
   originalJobId?: string;
-  mode?: 'default' | 'rerender' | 'variation';
+  mode?: 'default' | 'rerender' | 'variation' | 'upscale';
   secondaryRole?: SecondaryReferenceRole;
   compositionMode?: CompositionMode;
   secondaryScale?: string;

@@ -39,16 +39,17 @@ interface GenerateParams {
   secondaryScale?: string;
   secondaryPlacement?: string;
   isVariation?: boolean;
+  isUpscale?: boolean;
   originalJobId?: string;
 }
 
-// Core execution engine for generation, re-render, and variation
+// Core execution engine for generation, re-render, variation, and HD upscale
 async function processPhotoshootGeneration(params: GenerateParams) {
   const startTime = Date.now();
   const sessionId = params.sessionId || 'default_anonymous_session';
   const finalPresetId = params.presetId || 'premium_bright_studio';
   const inputAspectRatio = params.aspectRatio || '1:1';
-  const inputQuality = params.outputQuality || '2k';
+  const inputQuality = params.outputQuality || 'standard';
   const hasSecondaryReference = params.images.length > 1;
   const secondaryRole = params.secondaryRole || (hasSecondaryReference ? 'packaging' : undefined);
   const compositionMode = params.compositionMode || (hasSecondaryReference ? 'product_with_packaging' : 'single_product');
@@ -99,7 +100,7 @@ async function processPhotoshootGeneration(params: GenerateParams) {
     });
   }
 
-  const mode = params.isVariation ? 'variation' : (params.originalJobId ? 'rerender' : 'default');
+  const mode = params.isUpscale ? 'upscale' : (params.isVariation ? 'variation' : (params.originalJobId ? 'rerender' : 'default'));
 
   // Create initial job in repository
   const initialJob = await photoshootRepository.createJob({
@@ -142,23 +143,26 @@ async function processPhotoshootGeneration(params: GenerateParams) {
   if (inputAspectRatio === "9:16") geminiAspectRatio = "9:16";
   if (inputAspectRatio === "16:9") geminiAspectRatio = "16:9";
 
-  const is2K = inputQuality === "2k";
   let resultImageUrl: string | null = null;
   let attempt = 0;
-  const maxRetries = 2;
+  // Maximum 1 retry (2 attempts total) only for 429/503
+  const maxRetries = 1;
 
   while (attempt <= maxRetries) {
     try {
       if (attempt === 1) await new Promise(r => setTimeout(r, 2000));
-      if (attempt === 2) await new Promise(r => setTimeout(r, 5000));
 
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error("TIMEOUT_ERROR")), 90000);
       });
 
       const imageConfig: any = { aspectRatio: geminiAspectRatio };
-      if (!model.includes('lite') && is2K) {
+      if (inputQuality === "2k") {
         imageConfig.imageSize = "2K";
+      } else if (inputQuality === "preview") {
+        imageConfig.imageSize = "512";
+      } else {
+        imageConfig.imageSize = "1K";
       }
       const config = { imageConfig };
 
@@ -447,7 +451,7 @@ router.post("/photoshoots/:id/rerender", async (req: any, res: any) => {
       images,
       presetId: originalJob.presetId,
       aspectRatio: originalJob.aspectRatio,
-      outputQuality: originalJob.outputQuality,
+      outputQuality: req.body?.outputQuality || originalJob.outputQuality,
       sessionId: requestSessionId || originalJob.sessionId,
       isVariation: false,
       originalJobId: originalJob.id,
@@ -519,7 +523,7 @@ router.post("/photoshoots/:id/variation", async (req: any, res: any) => {
       images,
       presetId: originalJob.presetId,
       aspectRatio: originalJob.aspectRatio,
-      outputQuality: originalJob.outputQuality,
+      outputQuality: req.body?.outputQuality || originalJob.outputQuality,
       sessionId: requestSessionId || originalJob.sessionId,
       isVariation: true,
       originalJobId: originalJob.id,
@@ -541,7 +545,80 @@ router.post("/photoshoots/:id/variation", async (req: any, res: any) => {
   }
 });
 
-// 6. DELETE /api/photoshoots/:id
+// 6. POST /api/photoshoots/:id/upscale - Upscale photoshoot to 2K HD
+router.post("/photoshoots/:id/upscale", async (req: any, res: any) => {
+  if (isGenerating) {
+    return res.status(429).json({
+      error: "Một yêu cầu tạo ảnh đang được xử lý. Vui lòng chờ hoàn tất.",
+      code: "REQUEST_IN_PROGRESS"
+    });
+  }
+
+  isGenerating = true;
+
+  try {
+    const originalJob = await photoshootRepository.getJobById(req.params.id);
+    if (!originalJob) {
+      return res.status(404).json({ error: "Không tìm thấy photoshoot gốc để nâng cấp HD.", code: "NOT_FOUND" });
+    }
+
+    const requestSessionId = req.body?.sessionId || req.query?.sessionId || req.headers['x-session-id'];
+    if (!requestSessionId) {
+      return res.status(400).json({
+        success: false,
+        code: "MISSING_SESSION_ID",
+        error: "Thiếu sessionId."
+      });
+    }
+
+    if (
+      originalJob.sessionId &&
+      originalJob.sessionId !== requestSessionId &&
+      originalJob.sessionId !== 'default_anonymous_session'
+    ) {
+      return res.status(403).json({
+        success: false,
+        code: "FORBIDDEN",
+        error: "Bạn không có quyền nâng cấp ảnh này."
+      });
+    }
+
+    const images: { data: string; mimeType: string }[] = [
+      { data: originalJob.mainImageUrl, mimeType: "image/png" }
+    ];
+
+    if (originalJob.packagingImageUrl) {
+      images.push({ data: originalJob.packagingImageUrl, mimeType: "image/png" });
+    }
+
+    const result = await processPhotoshootGeneration({
+      images,
+      presetId: originalJob.presetId,
+      aspectRatio: originalJob.aspectRatio,
+      outputQuality: '2k',
+      sessionId: requestSessionId || originalJob.sessionId,
+      isVariation: false,
+      isUpscale: true,
+      originalJobId: originalJob.id,
+      secondaryRole: originalJob.secondaryRole,
+      compositionMode: originalJob.compositionMode,
+      secondaryScale: originalJob.secondaryScale,
+      secondaryPlacement: originalJob.secondaryPlacement
+    });
+
+    return res.json(result);
+  } catch (error: any) {
+    const status = error?.status || 500;
+    return res.status(status).json({
+      error: error?.error || error?.message || "Lỗi khi nâng cấp HD ảnh.",
+      code: error?.code || "UNKNOWN_ERROR"
+    });
+  } finally {
+    isGenerating = false;
+  }
+});
+
+// 7. DELETE /api/photoshoots/:id
 router.delete("/photoshoots/:id", async (req, res) => {
   try {
     const { id } = req.params;

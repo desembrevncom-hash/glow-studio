@@ -39,14 +39,26 @@ To deploy this application correctly:
   1. Configure **Google Cloud Storage** (`GCS_BUCKET_NAME`) in `server/services/storageService.ts` to store uploaded/generated image assets as durable URLs.
   2. Connect **Google Cloud Firestore**, **PostgreSQL**, or **Supabase** in `server/services/photoshootRepository.ts` for persistent database records.
 
+## Cost Optimization (Tối ưu chi phí tạo ảnh)
+
+Chi phí render hình ảnh chất lượng cao 2K khoảng **$0.101/ảnh (~2.700đ)**. Để tối ưu chi phí và tăng tốc độ làm việc:
+
+1. **Workflow khuyến nghị (Preview trước, HD sau):**
+   - **Thử nghiệm bố cục:** Chọn chất lượng `Preview tiết kiệm (0.5K)` (~$0.045 / ~1.200đ) hoặc `Standard (1K)` (~$0.067 / ~1.800đ) để thử góc máy, ánh sáng và kiểm tra bố cục sản phẩm.
+   - **Xuất ảnh chất lượng cao:** Sau khi đã chọn được bố cục ưng ý trong *Lịch sử Render*, bấm nút **✨ Nâng cấp HD (2K)** để AI tạo ảnh 2K cuối cùng phục vụ in ấn hoặc quảng cáo.
+2. **Lưu ý tính phí:**
+   - Mỗi lần bấm **Generate**, **Re-render**, **Biến thể (Variation)**, hoặc **Nâng cấp HD (Upscale)** đều gửi một yêu cầu tạo ảnh mới đến AI và tính chi phí tương ứng với mức chất lượng được chọn.
+   - Khi Re-render hoặc tạo Biến thể từ ảnh 2K, hệ thống sẽ hiển thị hộp thoại xác nhận để người dùng có thể chủ động chuyển về mức *Standard* tiết kiệm chi phí nếu muốn.
+
 ## API Endpoints
 
 - `GET /api/health` - Server health check & version info
 - `POST /api/photoshoots` - Create a new photoshoot (returns `jobId`, `imageUrl`, and `metadata`)
 - `GET /api/photoshoots/history?sessionId=...` - Get render history for a session
 - `GET /api/photoshoots/:id` - Get specific photoshoot job details
-- `POST /api/photoshoots/:id/rerender` - Re-run photoshoot with exact original recipe
-- `POST /api/photoshoots/:id/variation` - Generate an alternative composition variation
+- `POST /api/photoshoots/:id/rerender` - Re-run photoshoot with exact original recipe (supports quality override)
+- `POST /api/photoshoots/:id/variation` - Generate an alternative composition variation (supports quality override)
+- `POST /api/photoshoots/:id/upscale` - Upscale an existing photoshoot to 2K HD resolution
 - `DELETE /api/photoshoots/:id` - Delete a photoshoot job
 
 

@@ -7,6 +7,7 @@ interface RenderHistoryProps {
   isLoading: boolean;
   onRerender: (job: PhotoshootJob) => void;
   onVariation: (job: PhotoshootJob) => void;
+  onUpscale?: (job: PhotoshootJob) => void;
   onDelete: (jobId: string) => void;
   onSelectResult: (job: PhotoshootJob) => void;
   onReuseJobProduct?: (job: PhotoshootJob) => void;
@@ -20,6 +21,7 @@ export const RenderHistory: React.FC<RenderHistoryProps> = ({
   isLoading,
   onRerender,
   onVariation,
+  onUpscale,
   onDelete,
   onSelectResult,
   onReuseJobProduct,
@@ -65,6 +67,28 @@ export const RenderHistory: React.FC<RenderHistoryProps> = ({
       default:
         return null;
     }
+  };
+
+  const getQualityBadge = (quality?: string) => {
+    if (quality === 'preview') {
+      return (
+        <span className="bg-amber-950/80 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-bold text-amber-300 border border-amber-500/30">
+          Preview
+        </span>
+      );
+    }
+    if (quality === '2k') {
+      return (
+        <span className="bg-rose-950/80 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-bold text-rose-300 border border-rose-500/30">
+          HD 2K
+        </span>
+      );
+    }
+    return (
+      <span className="bg-zinc-800/80 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-semibold text-zinc-300 border border-white/10">
+        Standard
+      </span>
+    );
   };
 
   return (
@@ -141,12 +165,18 @@ export const RenderHistory: React.FC<RenderHistoryProps> = ({
                     <span className="bg-black/80 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-semibold text-zinc-400 border border-white/10">
                       {job.aspectRatio}
                     </span>
+                    {getQualityBadge(job.outputQuality)}
                     {compLabel && (
                       <span className="bg-zinc-800/90 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-semibold text-emerald-300 border border-emerald-500/30">
                         {compLabel}
                       </span>
                     )}
-                    {(job.mode === 'variation' || (Boolean(job.originalJobId) && job.mode !== 'rerender')) && (
+                    {job.mode === 'upscale' && (
+                      <span className="bg-amber-900/80 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-bold text-amber-200 border border-amber-500/40">
+                        Upscale HD
+                      </span>
+                    )}
+                    {(job.mode === 'variation' || (Boolean(job.originalJobId) && job.mode !== 'rerender' && job.mode !== 'upscale')) && (
                       <span className="bg-purple-900/80 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-bold text-purple-200 border border-purple-500/40">
                         Biến thể
                       </span>
@@ -184,6 +214,18 @@ export const RenderHistory: React.FC<RenderHistoryProps> = ({
 
                   {/* Action Buttons */}
                   <div className="flex flex-col gap-2 pt-2 border-t border-zinc-800/60">
+                    {/* HD Upscale Button (Only shown when not 2K and completed) */}
+                    {hasImage && job.outputQuality !== '2k' && onUpscale && (
+                      <button
+                        onClick={() => onUpscale(job)}
+                        disabled={isProcessing}
+                        title="Nâng cấp độ phân giải lên 2K HD"
+                        className="w-full py-1.5 px-3 rounded-xl bg-gradient-to-r from-amber-600/30 via-amber-500/25 to-yellow-600/30 hover:from-amber-600/40 hover:to-yellow-600/40 border border-amber-500/40 text-amber-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+                      >
+                        <span>{isProcessing ? 'Đang nâng cấp...' : '✨ Nâng cấp HD (2K)'}</span>
+                      </button>
+                    )}
+
                     <div className="grid grid-cols-4 gap-1.5">
                       {hasImage ? (
                         <a

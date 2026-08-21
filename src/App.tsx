@@ -8,6 +8,7 @@ import {
   getPhotoshootHistory,
   rerenderPhotoshoot,
   variationPhotoshoot,
+  upscalePhotoshoot,
   deletePhotoshoot,
 } from './services/geminiService';
 import {
@@ -26,7 +27,8 @@ import {
   PhotoshootMetadata,
   UploadedProductAsset,
   SecondaryReferenceRole,
-  CompositionMode
+  CompositionMode,
+  OutputQuality
 } from './types';
 import { PHOTO_PRESETS } from './constants/photoPresets';
 
@@ -40,7 +42,7 @@ const App: React.FC = () => {
   const [cooldown, setCooldown] = useState<number>(0);
   const [selectedPreset, setSelectedPreset] = useState<string>('premium_bright_studio');
   const [aspectRatio, setAspectRatio] = useState<string>('1:1');
-  const [outputQuality, setOutputQuality] = useState<string>('2k');
+  const [outputQuality, setOutputQuality] = useState<OutputQuality>('standard');
   const [secondaryRole, setSecondaryRole] = useState<SecondaryReferenceRole>('packaging');
   const [compositionMode, setCompositionMode] = useState<CompositionMode>('product_with_packaging');
   const [resultMetadata, setResultMetadata] = useState<PhotoshootMetadata | null>(null);
@@ -206,11 +208,22 @@ const App: React.FC = () => {
 
   const handleRerender = async (job: PhotoshootJob) => {
     if (actionInProgressId || appState === AppState.PROCESSING) return;
+
+    let targetQuality: string | undefined = undefined;
+    if (job.outputQuality === '2k') {
+      const useStandard = window.confirm(
+        'Ảnh này đang ở chất lượng 2K HD, re-render sẽ tốn chi phí cao hơn (~2.700đ / ảnh).\n\nBạn có muốn dùng Standard (1K ~1.800đ) để tiết kiệm chi phí không?\n\n- Bấm OK: Sử dụng Standard (Khuyên dùng - Tiết kiệm)\n- Bấm Cancel: Giữ nguyên chất lượng 2K HD'
+      );
+      if (useStandard) {
+        targetQuality = 'standard';
+      }
+    }
+
     setActionInProgressId(job.id);
     setError(null);
 
     try {
-      const result = await rerenderPhotoshoot(job.id);
+      const result = await rerenderPhotoshoot(job.id, undefined, targetQuality);
       setProcessedImage(result.imageUrl);
       setResultMetadata(result.metadata || null);
       setAppState(AppState.COMPLETED);
@@ -225,11 +238,22 @@ const App: React.FC = () => {
 
   const handleVariation = async (job: PhotoshootJob) => {
     if (actionInProgressId || appState === AppState.PROCESSING) return;
+
+    let targetQuality: string | undefined = undefined;
+    if (job.outputQuality === '2k') {
+      const useStandard = window.confirm(
+        'Ảnh này đang ở chất lượng 2K HD, tạo biến thể sẽ tốn chi phí cao hơn (~2.700đ / ảnh).\n\nBạn có muốn dùng Standard (1K ~1.800đ) để tiết kiệm chi phí không?\n\n- Bấm OK: Sử dụng Standard (Khuyên dùng - Tiết kiệm)\n- Bấm Cancel: Giữ nguyên chất lượng 2K HD'
+      );
+      if (useStandard) {
+        targetQuality = 'standard';
+      }
+    }
+
     setActionInProgressId(job.id);
     setError(null);
 
     try {
-      const result = await variationPhotoshoot(job.id);
+      const result = await variationPhotoshoot(job.id, undefined, targetQuality);
       setProcessedImage(result.imageUrl);
       setResultMetadata(result.metadata || null);
       setAppState(AppState.COMPLETED);
@@ -237,6 +261,25 @@ const App: React.FC = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
       setError(err.message || 'Không thể tạo biến thể ảnh. Vui lòng thử lại.');
+    } finally {
+      setActionInProgressId(null);
+    }
+  };
+
+  const handleUpscale = async (job: PhotoshootJob) => {
+    if (actionInProgressId || appState === AppState.PROCESSING) return;
+    setActionInProgressId(job.id);
+    setError(null);
+
+    try {
+      const result = await upscalePhotoshoot(job.id);
+      setProcessedImage(result.imageUrl);
+      setResultMetadata(result.metadata || null);
+      setAppState(AppState.COMPLETED);
+      loadRenderHistory();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err: any) {
+      setError(err.message || 'Không thể nâng cấp HD ảnh. Vui lòng thử lại.');
     } finally {
       setActionInProgressId(null);
     }
@@ -342,7 +385,7 @@ const App: React.FC = () => {
 
     setSelectedPreset(job.presetId || 'premium_bright_studio');
     setAspectRatio(job.aspectRatio || '1:1');
-    setOutputQuality(job.outputQuality || '2k');
+    setOutputQuality((job.outputQuality as OutputQuality) || 'standard');
     setProcessedImage(null);
     setAppState(AppState.IDLE);
     setError(null);
@@ -362,7 +405,7 @@ const App: React.FC = () => {
   const handleResetSettings = () => {
     setSelectedPreset('premium_bright_studio');
     setAspectRatio('1:1');
-    setOutputQuality('2k');
+    setOutputQuality('standard');
     setSecondaryRole('packaging');
     setCompositionMode('product_with_packaging');
     setError(null);
@@ -389,7 +432,7 @@ const App: React.FC = () => {
     setCooldown(0);
     setSelectedPreset('premium_bright_studio');
     setAspectRatio('1:1');
-    setOutputQuality('2k');
+    setOutputQuality('standard');
     setSecondaryRole('packaging');
     setCompositionMode('product_with_packaging');
     setAppState(AppState.IDLE);
@@ -535,19 +578,30 @@ const App: React.FC = () => {
                 </div>
 
                 <div className="flex flex-col gap-2 md:col-span-2">
-                  <label htmlFor="quality-select" className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-                    Chất lượng Render
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="quality-select" className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                      Chất lượng Render
+                    </label>
+                    <span className="text-[10px] text-indigo-400 font-mono">
+                      {outputQuality === 'preview' && '~$0.045 / ~1.200đ'}
+                      {outputQuality === 'standard' && '~$0.067 / ~1.800đ'}
+                      {outputQuality === '2k' && '~$0.101 / ~2.700đ'}
+                    </span>
+                  </div>
                   <select
                     id="quality-select"
                     value={outputQuality}
-                    onChange={(e) => setOutputQuality(e.target.value)}
+                    onChange={(e) => setOutputQuality(e.target.value as OutputQuality)}
                     disabled={isGenerating}
                     className="w-full p-3.5 rounded-xl bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:border-indigo-500 transition-colors appearance-none text-sm"
                   >
-                    <option value="2k">Ultra HD (2K) - Chi tiết cao</option>
-                    <option value="standard">Standard - Nhanh chóng</option>
+                    <option value="preview">Preview tiết kiệm (0.5K) - ~1.200đ</option>
+                    <option value="standard">Standard (1K) - Khuyên dùng - ~1.800đ</option>
+                    <option value="2k">HD Final (2K) - Ảnh cuối cùng - ~2.700đ</option>
                   </select>
+                  <p className="text-[11px] text-zinc-500 mt-0.5 leading-snug">
+                    Để tiết kiệm chi phí, hãy dùng Preview/Standard để thử bố cục. Chỉ dùng 2K khi đã chọn được ảnh cuối cùng.
+                  </p>
                 </div>
 
                 {/* Secondary Reference Role & Composition Controls */}
@@ -727,6 +781,7 @@ const App: React.FC = () => {
           isLoading={isHistoryLoading}
           onRerender={handleRerender}
           onVariation={handleVariation}
+          onUpscale={handleUpscale}
           onDelete={handleDeleteRenderJob}
           onSelectResult={handleSelectResult}
           onReuseProductFromJob={handleReuseJobProduct}
